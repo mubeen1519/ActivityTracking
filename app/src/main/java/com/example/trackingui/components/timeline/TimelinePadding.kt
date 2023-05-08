@@ -19,7 +19,7 @@ private class TimeLinePaddingImpl(
 ) : TimeLinePadding
 
 fun TimeLinePadding(
-    defaultPadding: PaddingValues = PaddingValues(18.dp),
+    defaultPadding: PaddingValues = PaddingValues(22.dp),
     contentStart: Dp = 10.dp,
     circleLineGap: Dp = 10.dp,
 

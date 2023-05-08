@@ -28,6 +28,7 @@ import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.ConstraintSet
 import androidx.constraintlayout.compose.Dimension
 import androidx.constraintlayout.compose.atLeastWrapContent
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.trackingui.R
 import com.example.trackingui.components.buttons.ScheduleHeader
 import com.example.trackingui.components.dialogs.AddActivityDialog
@@ -35,6 +36,7 @@ import com.example.trackingui.components.dialogs.AddSession
 import com.example.trackingui.components.infinitescroll.loadMoreData
 import com.example.trackingui.components.shape.Bubble
 import com.example.trackingui.screens.ActivityTypeAndCount
+import com.example.trackingui.screens.ActivityViewModel
 import com.example.trackingui.screens.TimelineEvent
 import com.example.trackingui.ui.theme.LightBlue
 import kotlinx.coroutines.delay
@@ -63,6 +65,8 @@ fun TimeLine(
     LaunchedEffect(Unit) { currentDate = allData[0].hours.toLocalDate() }
 
     val listState = rememberLazyListState()
+
+
 
     val loadData: () -> Unit = {
         val newData =
@@ -126,39 +130,40 @@ fun TimeLine(
 ////                            val new = i + 1
 ////                            session.add(new, timelineEvent)
 ////                            allData = session
-                        }
+                        },
+                        listState = listState
                     )
-////                    if (value == allData[index + 1]) {
-////                        Text(
-////                            text = value.hours.format(
-////                                DateTimeFormatter.ofPattern("EEEE")
-////                            ),
-////                            modifier.padding(end = 6.dp),
-////                            color = LightBlue,
-////                            fontWeight = FontWeight.Bold
-////                        )
-////                    }
+//                    if (textState == index) {
+//                        Text(
+//                            text = value.hours.format(
+//                                DateTimeFormatter.ofPattern("EEEE")
+//                            ),
+//                            modifier.padding(end = 6.dp),
+//                            color = LightBlue,
+//                            fontWeight = FontWeight.Bold
+//                        )
+//                    }
                 }
-            }
 
-            itemsIndexed(sortedData) { index, value ->
-                Text("hehe: $index: $value")
+
+//            itemsIndexed(sortedData) { index, value ->
+//                Text("hehe: $index: $value")
+//            }
+//        }
             }
         }
 
-
-
-        listState.ScrolledToEnd(
-            loadMore = {
-//                loadData()
-            },
-            setHeaderDate = {
-                scope.launch {
-//                    currentDate = allData[it].copy().hours.toLocalDate()
-                }
+                listState.ScrolledToEnd(
+                    loadMore = {
+                        loadData()
+                    },
+                    setHeaderDate = {
+                        scope.launch {
+                            currentDate = allData[it].copy().hours.toLocalDate()
+                        }
+                    }
+                )
             }
-        )
-    }
 }
 
 @SuppressLint("SuspiciousIndentation")
@@ -202,6 +207,7 @@ private fun TimelineView(
     groupIndex: Int,
     elementsSize: Int,
     elementsIndex: Int,
+    listState: LazyListState,
     timelineOption: TimeLineOption,
     timelinePadding: TimeLinePadding,
     isHeader: Boolean,
@@ -213,6 +219,11 @@ private fun TimelineView(
     val interactionSource = remember { MutableInteractionSource() }
     var showToolTip by remember {
         mutableStateOf(false)
+    }
+    val textState by remember {
+        derivedStateOf {
+            listState.firstVisibleItemIndex
+        }
     }
     val addDialogIndex: MutableState<Modeldata> = remember {
         mutableStateOf(Modeldata(index = groupIndex))
@@ -237,8 +248,8 @@ private fun TimelineView(
                 date = hourLabel.toLocalDate(),
                 events = item,
                 modifier = Modifier.constrainAs(bubbleC) {
-                    start.linkTo(circle.end, timelinePadding.contentStart)
-                    top.linkTo(parent.top, margin = (-40).dp)
+                    start.linkTo(circle.end)
+                    top.linkTo(parent.top, margin = (-25).dp)
                 })
         }
         if (isHeader) {
@@ -251,18 +262,19 @@ private fun TimelineView(
                     end.linkTo(circle.start, timelinePadding.contentStart)
                 })
         }
-//        if(groupIndex != groupSize.compareTo(-1)) {
-//            Text(
-//                text = hourLabel.format(DateTimeFormatter.ofPattern("EEEE")),
-//                color = LightBlue,
-//                modifier = Modifier.constrainAs(day) {
-//                    centerVerticallyTo(bottomLine)
-//                    centerAround(parent.start)
-//                    end.linkTo(topLine.end)
-//
-//                },
-//            )
-//        }
+        if(textState == groupIndex) {
+            Text(
+                text = hourLabel.format(DateTimeFormatter.ofPattern("EEEE")),
+                color = LightBlue,
+                modifier = Modifier.constrainAs(day) {
+                    centerTo(bottomLine)
+                    centerAround(parent.start)
+                    end.linkTo(topLine.end, margin = 65.dp)
+
+                },
+                fontWeight = FontWeight.Bold,
+            )
+        }
 
 
         if (popupVisible.value) {
@@ -270,7 +282,7 @@ private fun TimelineView(
                 alignment = Alignment.CenterEnd,
                 onDismissRequest = { popupVisible.value = false }) {
                 Card(
-                    modifier = Modifier.size(width = 130.dp, height = 160.dp),
+                    modifier = Modifier.width(130.dp),
                     elevation = CardDefaults.cardElevation(5.dp),
                     shape = RoundedCornerShape(5.dp),
                     colors = CardDefaults.cardColors(
@@ -344,6 +356,26 @@ private fun TimelineView(
                         }
                         Text(
                             text = "Split Activity",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    )
+                    {
+                        IconButton(onClick = { /*TODO*/ }) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.baseline_merge_24),
+                                contentDescription = "Merge",
+                                tint = Color.Gray
+                            )
+                        }
+                        Text(
+                            text = "Merge Activity",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurface
                         )

@@ -3,14 +3,12 @@ package com.example.trackingui.components.shape
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,9 +53,9 @@ fun Bubble(
             .shadow(2.dp)
             .background(LightOrange)
             .padding(bottom = arrowHeight)
-            .size(width = 100.dp, height = 80.dp),
+            .width(width = 100.dp),
     ) {
-        Box(modifier = Modifier.padding(8.dp)) {
+        Box(modifier = Modifier.padding(top = 8.dp, end = 8.dp, start = 8.dp, bottom = 4.dp)) {
             Column {
                     Text(
                         text = date.format(DateTimeFormatter.ofPattern("MMM d, yyyy")),
@@ -118,18 +116,3 @@ fun getBubbleShape(
 
     }
 }
-
-//@Preview
-//@Composable
-//fun Perviews(){
-//    MaterialTheme {
-//        Surface {
-//            Box(modifier = Modifier.size(400.dp), contentAlignment = Alignment.Center){
-//                var showToolTip by remember {
-//                    mutableStateOf(false)
-//                }
-//                Bubble(text = "hello", modifier = Modifier.offset(x = (-15).dp, (52).dp))
-//            }
-//        }
-//    }
-//}

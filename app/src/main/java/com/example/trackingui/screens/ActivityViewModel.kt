@@ -18,16 +18,4 @@ class ActivityViewModel @Inject constructor(
 ) : ViewModel() {
     @Inject
     lateinit var themeSetting: ThemeSetting
-
-    @RequiresApi(Build.VERSION_CODES.O)
-    var events = mutableStateOf(TimelineEvent())
-
-    @RequiresApi(Build.VERSION_CODES.O)
-    fun addActivity(event : TimelineEvent, newValue : Int){
-        viewModelScope.launch {
-           val newActivity = events.value.copy(maxCount = event.maxCount.plus(newValue))
-        }
-
-
-    }
 }

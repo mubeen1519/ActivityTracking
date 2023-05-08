@@ -116,7 +116,7 @@ internal fun addAnimation(duration: Int = 500, isNext: Boolean): ContentTransfor
 
 @RequiresApi(Build.VERSION_CODES.O)
 fun getTitleText(day: LocalDate): String {
-    val dayOfWeek = DateTimeFormatter.ofPattern("    EEEE")
+    val dayOfWeek = DateTimeFormatter.ofPattern("     " + "EEEE")
     val dateFormatter = DateTimeFormatter.ofPattern("MMM dd, yyyy")
     return "${dayOfWeek.format(day)}\n${dateFormatter.format(day)}"
 }
