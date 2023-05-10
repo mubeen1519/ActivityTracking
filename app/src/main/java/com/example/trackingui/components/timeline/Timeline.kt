@@ -25,19 +25,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.constraintlayout.compose.ConstraintLayout
-import androidx.constraintlayout.compose.ConstraintSet
 import androidx.constraintlayout.compose.Dimension
 import androidx.constraintlayout.compose.atLeastWrapContent
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.trackingui.R
 import com.example.trackingui.components.buttons.ScheduleHeader
 import com.example.trackingui.components.dialogs.AddActivityDialog
 import com.example.trackingui.components.dialogs.AddSession
+import com.example.trackingui.components.dialogs.DeleteActivityDialog
 import com.example.trackingui.components.infinitescroll.loadMoreData
 import com.example.trackingui.components.shape.Bubble
-import com.example.trackingui.screens.ActivityTypeAndCount
-import com.example.trackingui.screens.ActivityViewModel
-import com.example.trackingui.screens.TimelineEvent
+import com.example.trackingui.model.ActivityTypeAndCount
+import com.example.trackingui.model.ModeldataId
+import com.example.trackingui.model.TimelineEvent
 import com.example.trackingui.ui.theme.LightBlue
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -51,30 +50,32 @@ private const val HeaderIndex = -1
 @OptIn(ExperimentalFoundationApi::class)
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun TimeLine(
-    items: List<TimelineEvent>,
+fun <T : Enum<T>> TimeLine(
+    items: List<TimelineEvent<T>>,
     modifier: Modifier = Modifier,
     timelineOption: TimeLineOption = TimeLineOption(),
     timelinePadding: TimeLinePadding = TimeLinePadding(),
-    header: @Composable (TimelineEvent) -> Unit,
+    header: @Composable (TimelineEvent<T>) -> Unit,
+    enumClass: Class<T>
 ) {
     var currentDate by remember { mutableStateOf(LocalDate.now()) }
     val scope = rememberCoroutineScope()
     var allData by remember { mutableStateOf(items) }
-
     LaunchedEffect(Unit) { currentDate = allData[0].hours.toLocalDate() }
 
     val listState = rememberLazyListState()
 
 
-
     val loadData: () -> Unit = {
         val newData =
-            if (allData.isEmpty()) loadMoreData(LocalDate.now()) else loadMoreData(allData[allData.size - 1].hours.toLocalDate())
+            if (allData.isEmpty()) loadMoreData(LocalDate.now(), enumClass) else loadMoreData(
+                allData[allData.size - 1].hours.toLocalDate(),
+                enumClass
+            )
         allData = allData + newData
     }
 
-    Column(modifier = modifier.fillMaxSize()) {
+    Column(modifier = Modifier.padding(top = 60.dp)) {
         Row(modifier = Modifier.fillMaxWidth()) {
             ScheduleHeader(dateTime = currentDate) {
                 currentDate = it
@@ -87,14 +88,12 @@ fun TimeLine(
             userScrollEnabled = true,
             contentPadding = timelinePadding.defaultPadding,
         ) {
-            val sortedData =
-                allData.stream().sorted(Comparator.comparing(TimelineEvent::hours, reverseOrder()))
-                    .toList()
-
-
+            val sortedData = allData.stream()
+                .sorted(Comparator.comparing(TimelineEvent<T>::hours, reverseOrder())).toList()
             sortedData.forEachIndexed { index, value ->
                 stickyHeader {
                     TimelineView(
+                        itemId = value.id,
                         item = value,
                         groupSize = sortedData.size,
                         groupIndex = index,
@@ -105,18 +104,18 @@ fun TimeLine(
                         isHeader = true,
                         header = header,
                         hourLabel = value.hours,
-                        onAddEvent = { event, i ->
-                            println("hello buddy: $allData")
+                        onAddEvent = { i, count, activity ->
                             val newEvent = allData.toMutableList()
-                            val eventIndex = newEvent[i]
-                            val newList = eventIndex.list.find { it.activity == event.activity }
+                            val eventIndex = newEvent.find { it.id == i }
+                            val newList =
+                                eventIndex?.list?.find { it.activity == activity }
                             if (newList != null) {
-                                newList.count += event.maxCount
+                                newList.count += count
                             } else {
-                                eventIndex.list.add(
+                                eventIndex?.list?.add(
                                     ActivityTypeAndCount(
-                                        count = event.maxCount,
-                                        activity = event.activity
+                                        count = count,
+                                        activity = activity
                                     )
                                 )
                             }
@@ -124,51 +123,50 @@ fun TimeLine(
 
                         },
                         addSession = { timelineEvent, index1 ->
-////                            val session = allData.toMutableList()
-////                            val newIndex = session[index1]
-////                            val i = session.indexOf(newIndex)
-////                            val new = i + 1
-////                            session.add(new, timelineEvent)
-////                            allData = session
+                            val session = allData.toMutableList()
+                            val newIndex = session.find { it.id == index1 }
+                            val checktime = newIndex?.hours?.toLocalTime()
+                            if (checktime != null) {
+                                if (checktime > timelineEvent.hours.toLocalTime())
+                                    session.add(timelineEvent)
+                            }
+                            allData = session
                         },
-                        listState = listState
+                        listState = listState,
+                        onDelete = { id ->
+                            val newEvent = allData.toMutableList()
+                            val eventIndex = newEvent.find { it.id == id }
+                            eventIndex?.list?.removeLast()
+                            allData = newEvent
+                        },
+                        enumClass = enumClass,
                     )
-//                    if (textState == index) {
-//                        Text(
-//                            text = value.hours.format(
-//                                DateTimeFormatter.ofPattern("EEEE")
-//                            ),
-//                            modifier.padding(end = 6.dp),
-//                            color = LightBlue,
-//                            fontWeight = FontWeight.Bold
-//                        )
-//                    }
                 }
-
-
-//            itemsIndexed(sortedData) { index, value ->
-//                Text("hehe: $index: $value")
-//            }
-//        }
             }
         }
-
-                listState.ScrolledToEnd(
-                    loadMore = {
-                        loadData()
-                    },
-                    setHeaderDate = {
-                        scope.launch {
-                            currentDate = allData[it].copy().hours.toLocalDate()
-                        }
-                    }
-                )
+        listState.ScrolledToEnd(
+            loadMore = {
+                loadData()
+            },
+            setHeaderDate = {
+                scope.launch {
+                    currentDate = allData[it].copy().hours.toLocalDate()
+                }
             }
+        )
+    }
+    LaunchedEffect(currentDate) {
+        val a = allData.indexOfFirst { it.hours.toLocalDate() <= currentDate }
+        if (a != -1) {
+            listState.scrollToItem(a)
+
+        }
+    }
 }
 
 @SuppressLint("SuspiciousIndentation")
 @Composable
-fun LazyListState.ScrolledToEnd(
+private fun LazyListState.ScrolledToEnd(
     loadMore: () -> Unit,
     setHeaderDate: (Int) -> Unit,
     buffer: Int = 2,
@@ -194,26 +192,28 @@ fun LazyListState.ScrolledToEnd(
     }
 }
 
-data class Modeldata(
-    val index: Int,
-)
+
+
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-private fun TimelineView(
-    item: TimelineEvent,
+private fun <T : Enum<T>> TimelineView(
+    item: TimelineEvent<T>,
     hourLabel: LocalDateTime,
     groupSize: Int,
     groupIndex: Int,
+    itemId: String,
     elementsSize: Int,
     elementsIndex: Int,
     listState: LazyListState,
     timelineOption: TimeLineOption,
     timelinePadding: TimeLinePadding,
     isHeader: Boolean,
-    header: @Composable (TimelineEvent) -> Unit,
-    onAddEvent: (TimelineEvent, index: Int) -> Unit,
-    addSession: (TimelineEvent, index: Int) -> Unit
+    header: @Composable (TimelineEvent<T>) -> Unit,
+    onAddEvent: (index: String, maxCount : Int, activity : T) -> Unit,
+    enumClass: Class<T>,
+    addSession: (TimelineEvent<T>, index: String) -> Unit,
+    onDelete: (index: String) -> Unit
 ) {
     var tapped by remember { mutableStateOf(false) }
     val interactionSource = remember { MutableInteractionSource() }
@@ -225,13 +225,21 @@ private fun TimelineView(
             listState.firstVisibleItemIndex
         }
     }
-    val addDialogIndex: MutableState<Modeldata> = remember {
-        mutableStateOf(Modeldata(index = groupIndex))
+    val eventId: MutableState<ModeldataId> = remember {
+        mutableStateOf(
+            ModeldataId(
+                index = itemId,
+            )
+        )
     }
+
     val addDialogState: MutableState<Boolean> = remember {
         mutableStateOf(false)
     }
     val addSessionDialog: MutableState<Boolean> = remember {
+        mutableStateOf(false)
+    }
+    val deleteDialog: MutableState<Boolean> = remember {
         mutableStateOf(false)
     }
     val popupVisible = remember { mutableStateOf(false) }
@@ -242,7 +250,7 @@ private fun TimelineView(
             .height(timelineOption.contentHeight)
     )
     {
-        val (circle, circleInnerLine, topLine, bottomLine, timelineContent, hours, bubbleC,day) = createRefs()
+        val (circle, circleInnerLine, topLine, bottomLine, timelineContent, hours, bubbleC, day) = createRefs()
         if (showToolTip) {
             Bubble(
                 date = hourLabel.toLocalDate(),
@@ -262,7 +270,7 @@ private fun TimelineView(
                     end.linkTo(circle.start, timelinePadding.contentStart)
                 })
         }
-        if(textState == groupIndex) {
+        if (textState == groupIndex) {
             Text(
                 text = hourLabel.format(DateTimeFormatter.ofPattern("EEEE")),
                 color = LightBlue,
@@ -277,10 +285,46 @@ private fun TimelineView(
         }
 
 
+
+
+        Icon(
+            painter = painterResource(id = timelineOption.circleIcon),
+            contentDescription = "circle",
+            tint = if (isHeader) timelineOption.circleColor else Color.Transparent,
+            modifier = Modifier
+                .size(timelineOption.circleSize)
+                .constrainAs(circle) {
+                    start.linkTo(parent.start, margin = 70.dp)
+                    top.linkTo(timelineContent.top)
+                    bottom.linkTo(timelineContent.bottom)
+                }
+        )
+        if (!isHeader) {
+            Divider(
+                modifier = Modifier.constrainAs(circleInnerLine) {
+                    top.linkTo(circle.top)
+                    bottom.linkTo(circle.bottom)
+                    start.linkTo(circle.start)
+                    end.linkTo(circle.end)
+                    width = Dimension.value(timelineOption.lineWidth)
+                    height = Dimension.fillToConstraints
+                },
+                color = timelineOption.lineColor
+            )
+        }
         if (popupVisible.value) {
             Popup(
                 alignment = Alignment.CenterEnd,
-                onDismissRequest = { popupVisible.value = false }) {
+                onDismissRequest = { popupVisible.value = false }
+            ) {
+                if (addDialogState.value) {
+                    AddActivityDialog(
+                        onAddEvent = onAddEvent,
+                        state = addDialogState,
+                        id = eventId,
+                        activityEnumClass = enumClass,
+                    )
+                }
                 Card(
                     modifier = Modifier.width(130.dp),
                     elevation = CardDefaults.cardElevation(5.dp),
@@ -300,13 +344,7 @@ private fun TimelineView(
                         verticalAlignment = Alignment.CenterVertically
                     )
                     {
-                        if (addDialogState.value) {
-                            AddActivityDialog(
-                                onAddEvent = onAddEvent,
-                                state = addDialogState,
-                                data = addDialogIndex
-                            )
-                        }
+
                         IconButton(onClick = { }) {
                             Icon(
                                 imageVector = Icons.Default.Add,
@@ -323,10 +361,20 @@ private fun TimelineView(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(4.dp),
+                            .padding(4.dp)
+                            .clickable {
+                                deleteDialog.value = true
+                            },
                         verticalAlignment = Alignment.CenterVertically
                     )
                     {
+                        if (deleteDialog.value) {
+                            DeleteActivityDialog(
+                                onDelete = onDelete,
+                                state = deleteDialog,
+                                id = eventId
+                            )
+                        }
                         IconButton(onClick = { /*TODO*/ }) {
                             Icon(
                                 imageVector = Icons.Default.Delete,
@@ -383,47 +431,6 @@ private fun TimelineView(
                 }
             }
         }
-        if (addSessionDialog.value) {
-            AddSession(
-                onAddSession = addSession,
-                currentDate = hourLabel.toLocalDate(),
-                state = addSessionDialog,
-                data = addDialogIndex
-            )
-        }
-        Icon(
-            painter = painterResource(id = timelineOption.circleIcon),
-            contentDescription = "circle",
-            tint = if (isHeader) timelineOption.circleColor else Color.Transparent,
-            modifier = Modifier
-                .size(timelineOption.circleSize)
-                .constrainAs(circle) {
-                    start.linkTo(parent.start, margin = 70.dp)
-                    top.linkTo(timelineContent.top)
-                    bottom.linkTo(timelineContent.bottom)
-                }
-                .pointerInput(Unit) {
-                    detectTapGestures(
-                        onLongPress = {
-                            addSessionDialog.value = true
-                        },
-                    )
-                }
-        )
-        if (!isHeader) {
-            Divider(
-                modifier = Modifier.constrainAs(circleInnerLine) {
-                    top.linkTo(circle.top)
-                    bottom.linkTo(circle.bottom)
-                    start.linkTo(circle.start)
-                    end.linkTo(circle.end)
-                    width = Dimension.value(timelineOption.lineWidth)
-                    height = Dimension.fillToConstraints
-                },
-                color = timelineOption.lineColor
-            )
-        }
-
 
         Surface(
             modifier = Modifier
@@ -432,7 +439,7 @@ private fun TimelineView(
                     top.linkTo(parent.top)
                     bottom.linkTo(parent.bottom)
                 }
-                .pointerInput(Unit) {
+                .pointerInput(true) {
                     detectTapGestures(
                         onTap = {
                             tapped = true
@@ -447,7 +454,12 @@ private fun TimelineView(
                             }
                         },
                         onLongPress = {
-                            popupVisible.value = true
+                            scope.launch {
+                                val press = PressInteraction.Press(it)
+                                interactionSource.emit(press)
+                                interactionSource.emit(PressInteraction.Release(press))
+                                popupVisible.value = true
+                            }
                         }
                     )
                 }
@@ -456,6 +468,7 @@ private fun TimelineView(
             if (isHeader) {
                 header(item)
             }
+
         }
         if (!(groupIndex == 0 && elementsIndex == HeaderIndex)) {
             Divider(
@@ -473,20 +486,46 @@ private fun TimelineView(
                 color = timelineOption.lineColor
             )
         }
+        if (addSessionDialog.value) {
+            AddSession(
+                onAddSession = addSession,
+                currentDate = hourLabel.toLocalDate(),
+                state = addSessionDialog,
+                data = eventId,
+                enumClass = enumClass,
+            )
+        }
 
         if (!(groupIndex == groupSize - 1 && elementsIndex == elementsSize - 1)) {
             Divider(
-                modifier = Modifier.constrainAs(bottomLine) {
-                    top.linkTo(
-                        circle.bottom,
-                        if (isHeader) timelinePadding.circleLineGap else 0.dp
-                    )
-                    bottom.linkTo(parent.bottom)
-                    start.linkTo(circle.start)
-                    end.linkTo(circle.end)
-                    width = Dimension.value(timelineOption.lineWidth)
-                    height = Dimension.fillToConstraints
-                },
+                modifier = Modifier
+                    .constrainAs(bottomLine) {
+                        top.linkTo(
+                            circle.bottom,
+                            if (isHeader) timelinePadding.circleLineGap else 0.dp
+                        )
+                        bottom.linkTo(parent.bottom)
+                        start.linkTo(circle.start)
+                        end.linkTo(circle.end)
+                        width = Dimension.value(timelineOption.lineWidth)
+                        height = Dimension.fillToConstraints
+                    }
+                    .pointerInput(true) {
+                        detectTapGestures(
+                            onLongPress = {
+                                tapped = true
+                                addSessionDialog.value = true
+                                scope.launch {
+                                    val press = PressInteraction.Press(it)
+                                    interactionSource.emit(press)
+                                    interactionSource.emit(PressInteraction.Release(press))
+                                    delay(2000)
+                                    tapped = false
+                                }
+                            }
+                        )
+                    }
+                    .indication(interactionSource, LocalIndication.current),
                 color = timelineOption.lineColor
             )
         }

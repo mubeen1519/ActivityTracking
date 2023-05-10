@@ -12,32 +12,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.example.trackingui.components.timeline.Modeldata
-import com.example.trackingui.screens.ActivityType
-import com.example.trackingui.screens.ActivityTypeAndCount
-import com.example.trackingui.screens.TimelineEvent
+import com.example.trackingui.model.ModeldataId
 import com.example.trackingui.ui.theme.LightOrange
-import java.time.LocalDateTime
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddActivityDialog(
-    onAddEvent: (TimelineEvent, index: Int) -> Unit,
-    data: MutableState<Modeldata>,
-    state: MutableState<Boolean>
+fun <T : Enum<T>> AddActivityDialog(
+    onAddEvent: (index: String, maxCount : Int ,activity : T) -> Unit,
+    id: MutableState<ModeldataId>,
+    state: MutableState<Boolean>,
+    activityEnumClass: Class<T>
 ) {
-    var activity by remember { mutableStateOf(ActivityType.Fitness) }
+    var activity by remember { mutableStateOf(activityEnumClass.enumConstants?.firstOrNull()) }
     var maxCount by remember {
         mutableStateOf(0)
     }
-//    var activityCountList : MutableList<ActivityTypeAndCount> = remember {
-//        mutableStateListOf(ActivityTypeAndCount(
-//            activity = ActivityType.Fitness,
-//            count = 0
-//        ))
-//    }
-    var hours by remember { mutableStateOf(LocalDateTime.now()) }
+
 
     var expanded by remember { mutableStateOf(false) }
 
@@ -46,7 +37,7 @@ fun AddActivityDialog(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(10.dp)
-                .background(LightOrange),
+                .background(Color.White),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -75,7 +66,7 @@ fun AddActivityDialog(
                     }
                 ) {
                     TextField(
-                        value = activity.name,
+                        value = activity?.name ?: "",
                         onValueChange = {},
                         readOnly = true,
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
@@ -86,7 +77,7 @@ fun AddActivityDialog(
                         expanded = expanded,
                         onDismissRequest = { expanded = false }
                     ) {
-                        for (activityType in ActivityType.values()) {
+                        for (activityType in activityEnumClass.enumConstants!!) {
                             DropdownMenuItem(
                                 text = { Text(text = activityType.name) },
                                 onClick = {
@@ -121,13 +112,7 @@ fun AddActivityDialog(
             ) {
                 Button(
                     onClick = {
-                        val event = TimelineEvent(
-                            activity = activity,
-                            hours = hours,
-                            maxCount = maxCount,
-                            progress = (maxCount.toDouble() / 10) * 100,
-                        )
-                        onAddEvent(event, data.value.index)
+                        onAddEvent(id.value.index, maxCount,activity!!)
                         state.value = false
                     }, colors = ButtonDefaults.buttonColors(
                         containerColor = LightOrange,

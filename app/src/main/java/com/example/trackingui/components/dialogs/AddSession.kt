@@ -3,6 +3,7 @@ package com.example.trackingui.components.dialogs
 import android.app.TimePickerDialog
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -11,11 +12,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.example.trackingui.components.timeline.Modeldata
-import com.example.trackingui.screens.ActivityType
-import com.example.trackingui.screens.TimelineEvent
+import com.example.trackingui.model.ActivityTypeAndCount
+import com.example.trackingui.model.ModeldataId
+import com.example.trackingui.model.TimelineEvent
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -24,12 +26,19 @@ import java.util.*
 @OptIn(ExperimentalMaterial3Api::class)
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun AddSession(
-    onAddSession: (TimelineEvent,index : Int) -> Unit,
+fun <T : Enum<T>> AddSession(
+    onAddSession: (TimelineEvent<T>, index : String) -> Unit,
     state: MutableState<Boolean>,
     currentDate: LocalDate,
-    data : MutableState<Modeldata>
+    data : MutableState<ModeldataId>,
+    enumClass: Class<T>
 ) {
+        val activityCountList : MutableList<ActivityTypeAndCount<T>> = remember {
+        mutableStateListOf(ActivityTypeAndCount(
+            activity = enumClass.enumConstants!!.random(),
+            count = 8
+        ))
+    }
 
     val context = LocalContext.current
     val time = LocalDateTime.of(currentDate, LocalTime.now())
@@ -41,10 +50,9 @@ fun AddSession(
     var event by remember {
         mutableStateOf(
             TimelineEvent(
-                activity = ActivityType.Testing,
                 hours = LocalDateTime.of(currentDate, LocalTime.now()),
-                maxCount = 7,
-                progress = 70.0
+                metricPercentage = 70.0,
+                list = activityCountList
             )
         )
     }
@@ -71,14 +79,14 @@ fun AddSession(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(10.dp),
+                .padding(10.dp).background(Color.White),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(text = "Select Time")
+
             Spacer(modifier = Modifier.height(15.dp))
             Button(onClick = { timePickerDialog.show() }) {
-                Text(text = "Show")
+                Text(text = "Select Time")
             }
         }
     }

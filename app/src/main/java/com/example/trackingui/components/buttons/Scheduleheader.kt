@@ -43,7 +43,7 @@ fun ScheduleHeader(
     {
             IconButton(modifier = modifier.then(modifier.size(60.dp)),
                 onClick = {
-                onDateSelect(dateTime.minusDays(1))
+                onDateSelect(dateTime.minusYears(1))
             }) {
                 Icon(
                     painter = painterResource(id = R.drawable.baseline_skip_previous_24),
@@ -53,7 +53,7 @@ fun ScheduleHeader(
             }
             IconButton( modifier = modifier.then(modifier.size(60.dp)),
                 onClick = {
-                onDateSelect(dateTime.minusYears(1))
+                onDateSelect(dateTime.minusDays(1))
             }) {
                 Icon(
                     painter = painterResource(id = R.drawable.arrow_left),

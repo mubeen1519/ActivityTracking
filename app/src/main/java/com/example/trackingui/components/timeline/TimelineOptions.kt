@@ -32,10 +32,10 @@ class TimeLineOptionImpl(
 
 fun TimeLineOption(
     @DrawableRes circleIcon: Int = R.drawable.outline_circle_24,
-    circleSize: Dp = 30.dp,
+    circleSize: Dp = 35.dp,
     circleColor: Color = Color.Unspecified,
     lineColor: Color = LightOceanBlue,
-    lineWidth: Dp = 1.dp,
+    lineWidth: Dp = 2.dp,
     contentHeight: Dp = 150.dp,
 ): TimeLineOption =
     TimeLineOptionImpl(

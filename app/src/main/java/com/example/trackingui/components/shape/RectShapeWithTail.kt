@@ -8,9 +8,7 @@ import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -20,7 +18,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import com.example.trackingui.screens.TimelineEvent
+import com.example.trackingui.model.TimelineEvent
 import com.example.trackingui.ui.theme.LightOrange
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -28,10 +26,10 @@ import java.time.format.DateTimeFormatter
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun Bubble(
+fun<T : Enum<T>> Bubble(
     modifier: Modifier = Modifier,
     date: LocalDate,
-    events : TimelineEvent
+    events: TimelineEvent<T>
 
 ) {
     val density = LocalDensity.current
@@ -53,29 +51,29 @@ fun Bubble(
             .shadow(2.dp)
             .background(LightOrange)
             .padding(bottom = arrowHeight)
-            .width(width = 100.dp),
+            .width(width = 140.dp),
     ) {
         Box(modifier = Modifier.padding(top = 8.dp, end = 8.dp, start = 8.dp, bottom = 4.dp)) {
             Column {
-                    Text(
-                        text = date.format(DateTimeFormatter.ofPattern("MMM d, yyyy")),
-                        color = MaterialTheme.colorScheme.onSurface,
-                        style = MaterialTheme.typography.labelSmall
-                    )
-                    Text(
-                        text = "${events.progress.toInt()}%",
-                        color = MaterialTheme.colorScheme.onSurface,
-                        style = MaterialTheme.typography.labelSmall
-                    )
-                    Text(
-                        text = events.activity.name,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        style = MaterialTheme.typography.labelSmall
-                    )
-                }
+                Text(
+                    text = date.format(DateTimeFormatter.ofPattern("MMM d, yyyy")),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.labelSmall
+                )
+                Text(
+                    text = "${events.metricPercentage.toInt()}%",
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.labelSmall
+                )
+                Text(
+                    text = events.list.first().activity.name,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.labelSmall
+                )
             }
         }
     }
+}
 
 
 fun getBubbleShape(

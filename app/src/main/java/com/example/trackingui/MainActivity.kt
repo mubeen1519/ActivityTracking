@@ -9,9 +9,13 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
-import com.example.trackingui.screens.ActivityTimeline
+import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.compose.rememberNavController
+import com.example.trackingui.navgraph.NavGraph
+import com.example.trackingui.screens.ActivityViewModel
 import com.example.trackingui.ui.theme.AppTheme
 import com.example.trackingui.ui.theme.ThemeSetting
 import com.example.trackingui.ui.theme.TrackingUITheme
@@ -29,22 +33,28 @@ class MainActivity : ComponentActivity() {
 //        viewModel = ViewModelProvider(this).get(ActivityViewModel::class.java)
         setContent {
 
-//            val theme = themeSetting.themeFlow.collectAsState()
-//            val useDarkColors = when (theme.value) {
-//                AppTheme.DAY -> true
-//                AppTheme.AUTO -> isSystemInDarkTheme()
-//                AppTheme.NIGHT -> false
-//            }
-            TrackingUITheme() {
+            val theme = themeSetting.themeFlow.collectAsState()
+            val useDarkColors = when (theme.value) {
+                AppTheme.DAY -> true
+                AppTheme.AUTO -> isSystemInDarkTheme()
+                AppTheme.NIGHT -> false
+            }
+            TrackingUITheme(darkTheme = useDarkColors) {
                 // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    ActivityTimeline()
+                    MainScreen()
                 }
             }
         }
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun MainScreen(){
+    val navController = rememberNavController()
+    NavGraph(navHostController = navController)
+}
