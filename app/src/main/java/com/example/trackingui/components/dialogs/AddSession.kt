@@ -5,16 +5,15 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Text
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.example.trackingui.model.ActivityCategory
 import com.example.trackingui.model.ActivityTypeAndCount
 import com.example.trackingui.model.ModeldataId
 import com.example.trackingui.model.TimelineEvent
@@ -26,16 +25,17 @@ import java.util.*
 @OptIn(ExperimentalMaterial3Api::class)
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun <T : Enum<T>> AddSession(
-    onAddSession: (TimelineEvent<T>, index : String) -> Unit,
+fun AddSession(
+    onAddSession: (TimelineEvent, index : String) -> Unit,
     state: MutableState<Boolean>,
     currentDate: LocalDate,
     data : MutableState<ModeldataId>,
-    enumClass: Class<T>
+    onDeleteSession : (TimelineEvent,index : String) -> Unit,
+    activityCategory: ActivityCategory
 ) {
-        val activityCountList : MutableList<ActivityTypeAndCount<T>> = remember {
+        val activityCountList : MutableList<ActivityTypeAndCount> = remember {
         mutableStateListOf(ActivityTypeAndCount(
-            activity = enumClass.enumConstants!!.random(),
+            activity = activityCategory,
             count = 8
         ))
     }
@@ -79,14 +79,26 @@ fun <T : Enum<T>> AddSession(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(10.dp).background(Color.White),
+                .padding(10.dp)
+                .background(Color.White),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
             Spacer(modifier = Modifier.height(15.dp))
-            Button(onClick = { timePickerDialog.show() }) {
+            Text(text = "Select Time To Add New Session")
+            Spacer(modifier = Modifier.height(15.dp))
+            Button(onClick = { timePickerDialog.show() }, shape = RoundedCornerShape(5.dp)) {
                 Text(text = "Select Time")
+            }
+            Spacer(modifier = Modifier.height(15.dp))
+            Text(text = "Wanna Delete this Session?")
+            Spacer(modifier = Modifier.height(15.dp))
+            Button(onClick = {onDeleteSession(event,data.value.index)},  shape = RoundedCornerShape(5.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.Cyan,
+                    contentColor = Color.Red
+                )) {
+                Text(text = "Delete")
             }
         }
     }

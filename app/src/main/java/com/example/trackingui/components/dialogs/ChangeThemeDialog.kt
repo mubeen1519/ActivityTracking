@@ -36,11 +36,11 @@ private fun ThemeContent(
     val themeItems = listOf(
         RadioItems(
             id = AppTheme.DAY.ordinal,
-            name = "Light Theme"
+            name = "Night Theme"
         ),
         RadioItems(
             id = AppTheme.NIGHT.ordinal,
-            name = "Night Theme"
+            name = "Light Theme"
         ),
         RadioItems(
             id = AppTheme.AUTO.ordinal,

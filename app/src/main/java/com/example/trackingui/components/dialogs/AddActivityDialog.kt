@@ -12,19 +12,24 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.example.trackingui.model.ActivityCategory
+import com.example.trackingui.model.FitnessActivityType
+import com.example.trackingui.model.MeditationActivityType
 import com.example.trackingui.model.ModeldataId
+import com.example.trackingui.ui.theme.LightBlue
 import com.example.trackingui.ui.theme.LightOrange
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun <T : Enum<T>> AddActivityDialog(
-    onAddEvent: (index: String, maxCount : Int ,activity : T) -> Unit,
+fun AddActivityDialog(
+    onAddEvent: (id: String, maxCount : Int ,activity : ActivityCategory,listIndex : Int) -> Unit,
     id: MutableState<ModeldataId>,
     state: MutableState<Boolean>,
-    activityEnumClass: Class<T>
+    activityEnumClass: ActivityCategory,
+    listIndex : Int
 ) {
-    var activity by remember { mutableStateOf(activityEnumClass.enumConstants?.firstOrNull()) }
+    var activity : MutableState<ActivityCategory> =  remember { mutableStateOf(activityEnumClass) }
     var maxCount by remember {
         mutableStateOf(0)
     }
@@ -32,7 +37,7 @@ fun <T : Enum<T>> AddActivityDialog(
 
     var expanded by remember { mutableStateOf(false) }
 
-    AlertDialog(onDismissRequest = { state.value = false }) {
+    CommonDialog(state) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -66,7 +71,7 @@ fun <T : Enum<T>> AddActivityDialog(
                     }
                 ) {
                     TextField(
-                        value = activity?.name ?: "",
+                        value = activity.value.getName(),
                         onValueChange = {},
                         readOnly = true,
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
@@ -77,57 +82,74 @@ fun <T : Enum<T>> AddActivityDialog(
                         expanded = expanded,
                         onDismissRequest = { expanded = false }
                     ) {
-                        for (activityType in activityEnumClass.enumConstants!!) {
-                            DropdownMenuItem(
-                                text = { Text(text = activityType.name) },
-                                onClick = {
-                                    activity = activityType
-                                    expanded = false
+                        when (activityEnumClass) {
+                            is ActivityCategory.FitnessActivity -> {
+                                for (activityType in FitnessActivityType.values()) {
+                                    DropdownMenuItem(
+                                        text = { Text(text = activityType.name) },
+                                        onClick = {
+                                            activity.value =
+                                                ActivityCategory.FitnessActivity(activityType)
+                                            expanded = false
+                                        }
+                                    )
                                 }
-                            )
+                            }
+                            is ActivityCategory.MeditationActivity -> {
+                                for (activityType in MeditationActivityType.values()) {
+                                    DropdownMenuItem(
+                                        text = { Text(text = activityType.name) },
+                                        onClick = {
+                                            activity.value =
+                                                ActivityCategory.MeditationActivity(activityType)
+                                            expanded = false
+                                        }
+                                    )
+                                }
+                            }
                         }
                     }
                 }
             }
 
-            OutlinedTextField(
-                value = maxCount.toString(), onValueChange = {
-                    maxCount = it.toIntOrNull() ?: 0
-                },
-                label = {
-                    Text(text = "Number of Cycles")
-                },
-                shape = RoundedCornerShape(5.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(10.dp)
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Button(
-                    onClick = {
-                        onAddEvent(id.value.index, maxCount,activity!!)
-                        state.value = false
-                    }, colors = ButtonDefaults.buttonColors(
-                        containerColor = LightOrange,
-                        contentColor = MaterialTheme.colorScheme.onSurface
-                    )
-                ) {
-                    Text(text = "Add")
-                }
-
-                Text(
-                    text = "Cancel",
-                    modifier = Modifier.clickable { state.value = false },
-                    color = Color.Cyan
+                OutlinedTextField(
+                    value = maxCount.toString(), onValueChange = {
+                        maxCount = it.toIntOrNull() ?: 0
+                    },
+                    label = {
+                        Text(text = "Number of Cycles")
+                    },
+                    shape = RoundedCornerShape(5.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(10.dp)
                 )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Button(
+                        onClick = {
+                            onAddEvent(id.value.index, maxCount, activity.value, listIndex)
+                            state.value = false
+                        }, colors = ButtonDefaults.buttonColors(
+                            containerColor = LightBlue,
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        ), shape = RoundedCornerShape(5.dp)
+                    ) {
+                        Text(text = "Add")
+                    }
+
+                    Text(
+                        text = "Cancel",
+                        modifier = Modifier.clickable { state.value = false },
+                        color = Color.Cyan
+                    )
+                }
             }
         }
     }
-}

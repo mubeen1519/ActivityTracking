@@ -1,59 +1,50 @@
 package com.example.trackingui.components.dialogs
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.trackingui.model.ModeldataId
+import com.example.trackingui.ui.theme.LightBlue
 
-@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DeleteActivityDialog(
-    onDelete: (id: String, listIndex : Int) -> Unit,
+fun MergeDialog(
     state: MutableState<Boolean>,
+    onMerge: (id: String,index : Int) -> Unit,
     id: MutableState<ModeldataId>,
-    listIndex: Int
+    totalCount: Int,
+    listIndex : Int,
 ) {
     CommonDialog(state) {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(150.dp)
-                .background(MaterialTheme.colorScheme.background)
                 .padding(20.dp)
+                .background(Color.White)
+                .fillMaxWidth()
         ) {
-            Text(
-                text = "Are you sure? you want to delete activity",
-                color = MaterialTheme.colorScheme.onSurface,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(15.dp))
+            Text(text = "Add split count of $totalCount into this row?")
+            Spacer(modifier = Modifier.height(15.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Button(
                     onClick = {
-                        onDelete(id.value.index,listIndex)
+                        onMerge(id.value.index,listIndex)
                         state.value = false
-                    },
-                    shape = RoundedCornerShape(5.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.Cyan,
-                        contentColor = Color.Red
+                    }, shape = RoundedCornerShape(5.dp), colors = ButtonDefaults.buttonColors(
+                        containerColor = LightBlue,
+                        contentColor = Color.Black
                     )
                 ) {
-                    Text(text = "Delete")
+                    Text(text = "Merge")
                 }
 
                 Button(
@@ -61,13 +52,13 @@ fun DeleteActivityDialog(
                     shape = RoundedCornerShape(5.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color.White,
-                        contentColor = MaterialTheme.colorScheme.onSurface
+                        contentColor = Color.Black
                     )
                 ) {
                     Text(text = "Cancel")
                 }
             }
         }
-
     }
+
 }

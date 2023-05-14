@@ -4,6 +4,7 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
@@ -18,56 +19,86 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.trackingui.R
-import com.example.trackingui.components.infinitescroll.loadMoreData
 import com.example.trackingui.components.timeline.TimeLine
+import com.example.trackingui.model.ActivityCategory
+import com.example.trackingui.model.ActivityTypeAndCount
 import com.example.trackingui.model.MeditationActivityType
-import java.time.LocalDate
+import com.example.trackingui.model.TimelineEvent
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun MeditationScreen(navController: NavController) {
     var mDisplayMenu by remember { mutableStateOf(false) }
+    val list: MutableList<ActivityTypeAndCount> = mutableListOf()
+    val selectedIndex = remember {
+        mutableStateOf(0)
+    }
+    var tapped by remember { mutableStateOf(false) }
+    var showToolTip by remember {
+        mutableStateOf(false)
+    }
+    val scope = rememberCoroutineScope()
+    repeat(2) {
+        list.add(
+            ActivityTypeAndCount(
+                activity = ActivityCategory.MeditationActivity(MeditationActivityType.values().random()),
+                count = (0..10).random()
+            )
+        )
+    }
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .padding(20.dp)
     ) {
-            Text(
-                text = stringResource(id = R.string.meditation_screen),
-                color = MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.align(Alignment.TopCenter)
-            )
+        Text(
+            text = stringResource(id = R.string.meditation_screen),
+            color = MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 10.dp)
+        )
 
-            IconButton(onClick = { mDisplayMenu = !mDisplayMenu },modifier = Modifier.align(Alignment.TopEnd)) {
-                Icon(imageVector = Icons.Default.MoreVert, contentDescription = "menu")
+        IconButton(
+            onClick = { mDisplayMenu = !mDisplayMenu },
+            modifier = Modifier.align(Alignment.TopEnd)
+        ) {
+            Icon(imageVector = Icons.Default.MoreVert, contentDescription = "menu")
 
-                DropdownMenu(expanded = mDisplayMenu, onDismissRequest = { mDisplayMenu = false }
-                ) {
-                    DropdownMenuItem(text = { Text(text = "Change Theme") },
-                        onClick = { /*TODO*/ }
-                    )
-                    DropdownMenuItem(text = { Text(text = "Go To Fitness") },
-                        onClick = {
-                            navController.navigate(CategoryScreens.FitnessScreen.route) {
-                                launchSingleTop = true
-                            }
+            DropdownMenu(expanded = mDisplayMenu, onDismissRequest = { mDisplayMenu = false }
+            ) {
+                DropdownMenuItem(text = { Text(text = "Go To Fitness") },
+                    onClick = {
+                        navController.navigate(CategoryScreens.FitnessScreen.route) {
+                            launchSingleTop = true
                         }
-                    )
-                }
+                    }
+                )
+            }
         }
-        TimeLine<MeditationActivityType>(
-            items = loadMoreData(LocalDate.now(), MeditationActivityType::class.java),
-            header = { events ->
-
+        TimeLine(
+            header = { events,onItemClick ->
                 Row(
                     Modifier
                         .fillMaxWidth()
                         .background(MaterialTheme.colorScheme.background)
                 ) {
-                    events.list.forEach { value ->
+                    events.list.forEachIndexed { index, value ->
                         Column(
-                            Modifier.padding(vertical = 4.dp),
+                            Modifier.padding(vertical = 4.dp).clickable {
+                                selectedIndex.value = index
+                                onItemClick(index)
+                                if (selectedIndex.value == index) {
+                                    tapped = true
+                                    showToolTip =  true
+                                    scope.launch {
+                                        delay(2000)
+                                        showToolTip =  false
+                                        tapped = false
+                                    }
+                                }
+                            },
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Canvas(
@@ -93,7 +124,7 @@ fun MeditationScreen(navController: NavController) {
                     }
                 }
             },
-            enumClass = MeditationActivityType::class.java
+            activityCategory = ActivityCategory.MeditationActivity(MeditationActivityType.values().random()),
         )
     }
 }

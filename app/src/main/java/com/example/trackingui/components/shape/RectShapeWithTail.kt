@@ -20,16 +20,17 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.example.trackingui.model.TimelineEvent
 import com.example.trackingui.ui.theme.LightOrange
-import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun<T : Enum<T>> Bubble(
+fun Bubble(
     modifier: Modifier = Modifier,
-    date: LocalDate,
-    events: TimelineEvent<T>
+    date: LocalDateTime,
+    events: TimelineEvent,
+    index : Int
 
 ) {
     val density = LocalDensity.current
@@ -56,17 +57,17 @@ fun<T : Enum<T>> Bubble(
         Box(modifier = Modifier.padding(top = 8.dp, end = 8.dp, start = 8.dp, bottom = 4.dp)) {
             Column {
                 Text(
-                    text = date.format(DateTimeFormatter.ofPattern("MMM d, yyyy")),
+                    text = date.format(DateTimeFormatter.ofPattern("MMM d, yyyy hh:mm")),
                     color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.labelSmall
                 )
                 Text(
-                    text = "${events.metricPercentage.toInt()}%",
+                    text = "${events.metricPercentage.toInt()}%, ${events.list[index].count}",
                     color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.labelSmall
                 )
                 Text(
-                    text = events.list.first().activity.name,
+                    text = events.list[index].activity.getName(),
                     color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.labelSmall
                 )

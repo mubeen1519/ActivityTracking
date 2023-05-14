@@ -120,3 +120,4 @@ fun getTitleText(day: LocalDate): String {
     val dateFormatter = DateTimeFormatter.ofPattern("MMM dd, yyyy")
     return "${dayOfWeek.format(day)}\n${dateFormatter.format(day)}"
 }
+

@@ -1,5 +1,6 @@
 package com.example.trackingui.modules
 
+import com.example.trackingui.model.FitnessActivityType
 import com.example.trackingui.screens.ThemeSettingImpl
 import com.example.trackingui.ui.theme.ThemeSetting
 import dagger.Binds
@@ -17,4 +18,7 @@ abstract class HiltModules {
     abstract fun bindThemeSetting(
         themeSettingImpl: ThemeSettingImpl
     ) : ThemeSetting
+
+
+
 }

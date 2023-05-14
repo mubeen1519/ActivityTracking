@@ -10,16 +10,16 @@ import java.time.LocalDateTime
 import java.util.*
 
 @RequiresApi(Build.VERSION_CODES.O)
-data class TimelineEvent<T : Enum<T>>(
+data class TimelineEvent(
     val id: String = UUID.randomUUID().toString(),
     var hours: LocalDateTime = LocalDateTime.now(),
     var metricPercentage: Double = 0.0,
-    var list: MutableList<ActivityTypeAndCount<T>> = mutableListOf()
+    var list: MutableList<ActivityTypeAndCount> = mutableListOf()
 )
 
-data class ActivityTypeAndCount<T : Enum<T>>(
+data class ActivityTypeAndCount(
     var count: Int = 0,
-    var activity: T
+    var activity: ActivityCategory
 )
 
 data class ModeldataId(
@@ -39,5 +39,16 @@ enum class MeditationActivityType(var color : Color){
     Yoga(Orange),
     Pilates(ParrotGreen),
     BodyBalance(Color.Red)
+}
+
+sealed class ActivityCategory(val color : Color) {
+    class FitnessActivity(val type: FitnessActivityType) : ActivityCategory(type.color){
+        override fun getName() = type.name
+    }
+    class MeditationActivity(val type: MeditationActivityType) : ActivityCategory(type.color){
+        override fun getName() = type.name
+
+    }
+    abstract fun getName() :String
 }
 

@@ -30,14 +30,13 @@ class MainActivity : ComponentActivity() {
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-//        viewModel = ViewModelProvider(this).get(ActivityViewModel::class.java)
         setContent {
 
             val theme = themeSetting.themeFlow.collectAsState()
             val useDarkColors = when (theme.value) {
                 AppTheme.DAY -> true
-                AppTheme.AUTO -> isSystemInDarkTheme()
                 AppTheme.NIGHT -> false
+                AppTheme.AUTO -> isSystemInDarkTheme()
             }
             TrackingUITheme(darkTheme = useDarkColors) {
                 // A surface container using the 'background' color from the theme
