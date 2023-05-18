@@ -13,14 +13,14 @@ import java.util.*
 data class TimelineEvent(
     val id: String = UUID.randomUUID().toString(),
     var hours: LocalDateTime = LocalDateTime.now(),
-    var metricPercentage: Double = 0.0,
     var list: MutableList<ActivityTypeAndCount> = mutableListOf()
 )
 
 data class ActivityTypeAndCount(
     var count: Int = 0,
-    var activity: ActivityCategory
-)
+    var activity: ActivityCategory,
+    var metricPercentage: Double = 0.0,
+    )
 
 data class ModeldataId(
     val index: String,

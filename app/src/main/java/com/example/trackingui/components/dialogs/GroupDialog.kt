@@ -12,40 +12,47 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.trackingui.model.ModeldataId
+import com.example.trackingui.model.TimelineEvent
 import com.example.trackingui.ui.theme.LightBlue
 
 @Composable
-fun MergeDialog(
-    state: MutableState<Boolean>,
-    onMerge: (id: String,index : Int) -> Unit,
+fun GroupDialog(
+    onGroup: (id: String, listIndex: Int) -> Unit,
+    listIndex: Int,
     id: MutableState<ModeldataId>,
-    totalCount: Int,
-    listIndex : Int,
+    state: MutableState<Boolean>,
+    event: TimelineEvent
 ) {
-    CommonDialog(state) {
+
+    CommonDialog(state = state) {
         Column(
             modifier = Modifier
-                .padding(20.dp)
-                .background(MaterialTheme.colorScheme.background)
                 .fillMaxWidth()
+                .padding(10.dp)
+                .background(MaterialTheme.colorScheme.background)
         ) {
-            Spacer(modifier = Modifier.height(15.dp))
-            Text(text = "Add split count of $totalCount into this row?", color = MaterialTheme.colorScheme.onSurface)
-            Spacer(modifier = Modifier.height(15.dp))
+            Text(
+                text = "Do you want to track all ${event.list[listIndex].activity.getName()} activities?",
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(10.dp)
+            )
+            Spacer(modifier = Modifier.height(20.dp))
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(10.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Button(
                     onClick = {
-                        onMerge(id.value.index,listIndex)
+                        onGroup(id.value.index, listIndex)
                         state.value = false
                     }, shape = RoundedCornerShape(5.dp), colors = ButtonDefaults.buttonColors(
                         containerColor = LightBlue,
                         contentColor = MaterialTheme.colorScheme.onSurface
                     )
                 ) {
-                    Text(text = "Merge")
+                    Text(text = "Group")
                 }
 
                 Button(
@@ -60,6 +67,7 @@ fun MergeDialog(
                 }
             }
         }
+
     }
 
 }

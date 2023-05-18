@@ -19,7 +19,6 @@ fun loadMoreData(date: LocalDate, activityCategory : ActivityCategory): List<Tim
         val hour = kotlin.random.Random.nextInt(0, 24)
         val minute = kotlin.random.Random.nextInt(0, 60)
         val hours = LocalDateTime.of(date.minusDays(1), LocalTime.of(hour, minute))
-        val progress = (count.toDouble() / 10) * 100
         val id: String = UUID.randomUUID().toString()
 
         repeat(2) {
@@ -32,12 +31,13 @@ fun loadMoreData(date: LocalDate, activityCategory : ActivityCategory): List<Tim
                     activity = when(activityCategory){
                         is ActivityCategory.FitnessActivity -> ActivityCategory.FitnessActivity(randomFitnessActivityType)
                         is ActivityCategory.MeditationActivity -> ActivityCategory.MeditationActivity(randomMeditationActivityType)
-                    }
+                    },
+                    metricPercentage = (count.toDouble() / 10) * 100
                 )
             )
         }
 
-        newData.add(TimelineEvent(id, hours, progress, list))
+        newData.add(TimelineEvent(id, hours,list))
     }
     return newData.sortedBy { it.hours }
 }

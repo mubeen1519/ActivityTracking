@@ -1,5 +1,7 @@
 package com.example.trackingui.components.dialogs
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -16,13 +18,15 @@ import com.example.trackingui.model.MeditationActivityType
 import com.example.trackingui.model.ModeldataId
 import com.example.trackingui.ui.theme.LightBlue
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddActivityDialog(
-    onAddActivity: (id: String, maxCount: Int, activity: ActivityCategory) -> Unit,
+fun InsertActivityDialog(
+    onInsertEvent: (id: String, maxCount : Int, activity : ActivityCategory, listIndex : Int) -> Unit,
     id: MutableState<ModeldataId>,
+    state: MutableState<Boolean>,
     activityEnumClass: ActivityCategory,
-    state : MutableState<Boolean>
+    listIndex : Int
 ) {
     val activity : MutableState<ActivityCategory> =  remember { mutableStateOf(activityEnumClass) }
     var maxCount by remember {
@@ -113,52 +117,50 @@ fun AddActivityDialog(
                 }
             }
 
-            OutlinedTextField(
-                value = maxCount.toString(), onValueChange = {
-                    maxCount = it.toIntOrNull() ?: 0
-                },
-                label = {
-                    Text(text = "Number of Cycles")
-                },
-                shape = RoundedCornerShape(5.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(10.dp),
-                colors = TextFieldDefaults.textFieldColors(
-                    textColor = MaterialTheme.colorScheme.onSurface,
-                    containerColor = MaterialTheme.colorScheme.background,
-                    focusedIndicatorColor = LightBlue,
-                    unfocusedIndicatorColor = LightBlue
+                OutlinedTextField(
+                    value = maxCount.toString(), onValueChange = {
+                        maxCount = it.toIntOrNull() ?: 0
+                    },
+                    label = {
+                        Text(text = "Number of Cycles")
+                    },
+                    shape = RoundedCornerShape(5.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(10.dp),
+                    colors = TextFieldDefaults.textFieldColors(
+                        textColor = MaterialTheme.colorScheme.onSurface,
+                        containerColor = MaterialTheme.colorScheme.background,
+                        focusedIndicatorColor = LightBlue,
+                        unfocusedIndicatorColor = LightBlue
+                    )
                 )
-            )
 
-            Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(10.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Button(
-                    onClick = {
-                        onAddActivity(id.value.index, maxCount, activity.value)
-                        state.value = false
-                    }, colors = ButtonDefaults.buttonColors(
-                        containerColor = LightBlue,
-                        contentColor = MaterialTheme.colorScheme.onSurface
-                    ), shape = RoundedCornerShape(5.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(text = "Add")
-                }
+                    Button(
+                        onClick = {
+                            onInsertEvent(id.value.index, maxCount, activity.value, listIndex)
+                            state.value = false
+                        }, colors = ButtonDefaults.buttonColors(
+                            containerColor = LightBlue,
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        ), shape = RoundedCornerShape(5.dp)
+                    ) {
+                        Text(text = "Insert")
+                    }
 
-                Text(
-                    text = "Cancel",
-                    modifier = Modifier.clickable { state.value = false },
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                    Text(
+                        text = "Cancel",
+                        modifier = Modifier.clickable { state.value = false },
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
             }
         }
     }
-}

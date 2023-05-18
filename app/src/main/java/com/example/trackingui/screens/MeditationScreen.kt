@@ -4,7 +4,7 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
@@ -15,39 +15,42 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.Fill
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.trackingui.R
 import com.example.trackingui.components.timeline.TimeLine
-import com.example.trackingui.model.ActivityCategory
-import com.example.trackingui.model.ActivityTypeAndCount
-import com.example.trackingui.model.MeditationActivityType
-import com.example.trackingui.model.TimelineEvent
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import com.example.trackingui.model.*
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun MeditationScreen(navController: NavController) {
     var mDisplayMenu by remember { mutableStateOf(false) }
-    val list: MutableList<ActivityTypeAndCount> = mutableListOf()
     val selectedIndex = remember {
         mutableStateOf(0)
     }
     var tapped by remember { mutableStateOf(false) }
-    var showToolTip by remember {
-        mutableStateOf(false)
-    }
+
     val scope = rememberCoroutineScope()
+    val hour = kotlin.random.Random.nextInt(0, 24)
+    val minute = kotlin.random.Random.nextInt(0, 60)
+    val hours = LocalDateTime.of(LocalDate.now(), LocalTime.of(hour, minute))
+
+    val list: MutableList<ActivityTypeAndCount> = mutableListOf()
+
     repeat(2) {
         list.add(
             ActivityTypeAndCount(
-                activity = ActivityCategory.MeditationActivity(MeditationActivityType.values().random()),
+                activity = ActivityCategory.FitnessActivity(FitnessActivityType.values().random()),
                 count = (0..10).random()
             )
         )
     }
+
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
@@ -57,7 +60,9 @@ fun MeditationScreen(navController: NavController) {
             text = stringResource(id = R.string.meditation_screen),
             color = MaterialTheme.colorScheme.onSurface,
             style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.align(Alignment.TopCenter).padding(top = 10.dp)
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 10.dp)
         )
 
         IconButton(
@@ -78,7 +83,37 @@ fun MeditationScreen(navController: NavController) {
             }
         }
         TimeLine(
-            header = { events,onItemClick ->
+            item = listOf(
+                TimelineEvent(
+                    list = list,
+                    hours = hours
+                ),
+                TimelineEvent(
+                    list = list,
+                    hours = hours
+                ),
+                TimelineEvent(
+                    list = list,
+                    hours = hours
+                ),
+                TimelineEvent(
+                    list = list,
+                    hours = hours
+                ),
+                TimelineEvent(
+                    list = list,
+                    hours = hours
+                ),
+                TimelineEvent(
+                    list = list,
+                    hours = hours
+                ),
+                TimelineEvent(
+                    list = list,
+                    hours = hours
+                ),
+            ),
+            header = { events, onItemClick, onLongPress ->
                 Row(
                     Modifier
                         .fillMaxWidth()
@@ -86,19 +121,20 @@ fun MeditationScreen(navController: NavController) {
                 ) {
                     events.list.forEachIndexed { index, value ->
                         Column(
-                            Modifier.padding(vertical = 4.dp).clickable {
-                                selectedIndex.value = index
-                                onItemClick(index)
-                                if (selectedIndex.value == index) {
-                                    tapped = true
-                                    showToolTip =  true
-                                    scope.launch {
-                                        delay(2000)
-                                        showToolTip =  false
-                                        tapped = false
-                                    }
-                                }
-                            },
+                            Modifier
+                                .padding(vertical = 4.dp)
+                                .pointerInput(Unit) {
+                                    detectTapGestures(
+                                        onTap = {
+                                            selectedIndex.value = index
+                                            onItemClick(index)
+                                        },
+                                        onLongPress = {
+                                            selectedIndex.value = index
+                                            onLongPress(index)
+                                        }
+                                    )
+                                },
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Canvas(
@@ -124,7 +160,9 @@ fun MeditationScreen(navController: NavController) {
                     }
                 }
             },
-            activityCategory = ActivityCategory.MeditationActivity(MeditationActivityType.values().random()),
+            activityCategory = ActivityCategory.MeditationActivity(
+                MeditationActivityType.values().random()
+            ),
         )
     }
 }

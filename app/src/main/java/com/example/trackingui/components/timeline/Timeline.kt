@@ -17,7 +17,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -27,10 +26,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
+import androidx.compose.ui.zIndex
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import androidx.constraintlayout.compose.atLeastWrapContent
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.trackingui.R
 import com.example.trackingui.components.buttons.ScheduleHeader
 import com.example.trackingui.components.dialogs.*
@@ -40,8 +40,8 @@ import com.example.trackingui.model.ActivityCategory
 import com.example.trackingui.model.ActivityTypeAndCount
 import com.example.trackingui.model.ModeldataId
 import com.example.trackingui.model.TimelineEvent
-import com.example.trackingui.screens.ActivityViewModel
 import com.example.trackingui.ui.theme.LightBlue
+import com.example.trackingui.ui.theme.OceanBlue
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -55,61 +55,63 @@ private const val HeaderIndex = -1
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun TimeLine(
+    item: List<TimelineEvent>,
     modifier: Modifier = Modifier,
     timelineOption: TimeLineOption = TimeLineOption(),
     timelinePadding: TimeLinePadding = TimeLinePadding(),
-    header: @Composable (TimelineEvent, onItemClicked: (Int) -> Unit) -> Unit,
+    header: @Composable (TimelineEvent, onItemClicked: (Int) -> Unit, onItemLongClick: (Int) -> Unit) -> Unit,
     activityCategory: ActivityCategory,
-    viewModel: ActivityViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
-    var currentDate by remember { mutableStateOf(LocalDate.now()) }
-    val timelineList by viewModel.timelineEvents.observeAsState(emptyList())
+    val currentDate : MutableState<LocalDate> =  remember { mutableStateOf(LocalDate.now()) }
+
+
+    var allData by remember { mutableStateOf(item) }
     val scope = rememberCoroutineScope()
-//    var allData by remember { mutableStateOf(items) }
-    LaunchedEffect(Unit) {
-        if (timelineList.isNotEmpty()) {
-            currentDate = timelineList[0].hours.toLocalDate()
+    var lastItem: ActivityTypeAndCount? by remember {
+        mutableStateOf(null)
+    }
+
+    fun updateCurrentDate(newDate: LocalDate) {
+        scope.launch {
+            currentDate.value = newDate
         }
     }
+    val findTargetIndex: (List<TimelineEvent>, LocalDate) -> Int = { data, targetDate ->
+         data.indexOfFirst { it.hours.toLocalDate() == targetDate }
+    }
+
+
 
     val listState = rememberLazyListState()
 
-
-//    val loadData: () -> Unit = {
-//        val newData =
-//            if (allData.isEmpty()) loadMoreData(LocalDate.now(), activityCategory) else loadMoreData(
-//                allData[allData.size - 1].hours.toLocalDate(),
-//                activityCategory
-//            )
-//        allData = allData + newData
-//    }
-
-    listState.ScrolledToEnd(
-        loadMore = {
-            viewModel.loadData(activityCategory)
-        },
-        setHeaderDate = {
-            scope.launch {
-                currentDate = timelineList[it].copy().hours.toLocalDate()
-            }
-        }
-    )
+    val loadData: () -> Unit = {
+        val newData =
+            if (allData.isEmpty()) loadMoreData(
+                LocalDate.now(),
+                activityCategory
+            ) else loadMoreData(
+                allData[allData.size - 1].hours.toLocalDate(),
+                activityCategory
+            )
+        allData = allData + newData
+    }
 
 
     Column(modifier = Modifier.padding(top = 60.dp)) {
         Row(modifier = Modifier.fillMaxWidth()) {
-            ScheduleHeader(dateTime = currentDate) {
-                scope.launch {
-                    val targetIndex =
-                        timelineList.indexOfFirst { it.hours.toLocalDate() <= currentDate }
-                    if (targetIndex != -1) {
-                        listState.scrollToItem(targetIndex)
-                    }
-
-                }
-            }
+            ScheduleHeader(
+                dateTime = currentDate,
+                allData = allData,
+                listState = listState,
+                scope = scope,
+                updateCurrentDate = {
+                    currentDate.value = it
+                },
+                findTargetIndex = findTargetIndex,
+            )
         }
+
 
         LazyColumn(
             state = listState,
@@ -117,7 +119,7 @@ fun TimeLine(
             userScrollEnabled = true,
             contentPadding = timelinePadding.defaultPadding,
         ) {
-            val sortedData = timelineList.stream()
+            val sortedData = allData.stream()
                 .sorted(Comparator.comparing(TimelineEvent::hours, reverseOrder())).toList()
             sortedData.forEachIndexed { index, value ->
                 stickyHeader {
@@ -133,32 +135,171 @@ fun TimeLine(
                         isHeader = true,
                         header = header,
                         hourLabel = value.hours,
-                        onAddEvent = { i, count, activity, listIndex ->
-                            viewModel.addActivity(i, count, activity, listIndex)
+                        onInsertEvent = { i, count, activity, listIndex ->
+                            val newEvent = allData.toMutableList()
+                            val eventIndex = newEvent.find { it.id == i }
+                            eventIndex?.list?.add(
+                                listIndex,
+                                ActivityTypeAndCount(
+                                    count = count,
+                                    activity = activity,
+                                    metricPercentage = (count.toDouble() / 10) * 100
+                                )
+                            )
+                            allData = newEvent
                         },
                         addSession = { timelineEvent, id ->
-                            viewModel.addSession(timelineEvent, id)
+                            val session = allData.toMutableList()
+                            val newIndex = session.find { it.id == id }
+                            val checktime = newIndex?.hours?.toLocalTime()
+                            if (checktime != null) {
+                                if (checktime > timelineEvent.hours.toLocalTime())
+                                    session.add(timelineEvent)
+                            }
+                            allData = session
+
                         },
-                        listState = listState,
                         onDelete = { id, listIndex ->
-                            viewModel.onDeleteActivity(id, listIndex)
+                            val newEvent = allData.toMutableList()
+                            val eventIndex = newEvent.find { it.id == id }
+                            eventIndex?.list?.removeAt(listIndex)
+                            allData = newEvent
                         },
                         activityType = activityCategory,
-                        onDeleteSession = { timelineEvent, id ->
-                            viewModel.onDeleteSession(id)
+                        onDeleteSession = { _, id ->
+                            val newEvent = allData.toMutableList()
+                            val newIndex = newEvent.find { it.id == id }
+                            newEvent.remove(newIndex)
+                            allData = newEvent
                         },
-                        onSplit = { id, listindex ->
-                            viewModel.onSplitActivity(id, listindex,context)
+                        onSplit = { id, listindex, splitCount ->
+                            val event = allData.toMutableList()
+                            val i = event.find { it.id == id }
+                            val activityIndex = i?.list?.get(listindex)
+                            if (activityIndex?.count == 0) {
+                                Toast.makeText(
+                                    context,
+                                    "Sorry there is no activity present in here",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+
+                            } else {
+                                if (activityIndex != null) {
+                                    if (splitCount > activityIndex.count) {
+                                        Toast.makeText(
+                                            context,
+                                            "Sorry total count is less than split-count",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    } else {
+                                        activityIndex.count = activityIndex.count.minus(splitCount)
+                                        lastItem = activityIndex.copy(splitCount)
+                                        activityIndex.metricPercentage =
+                                            (activityIndex.count.toDouble() / 10) * 100
+                                        i.list[listindex] = activityIndex
+                                        allData = event
+                                    }
+                                }
+
+
+                            }
                         },
                         onMerge = { id, listIndex ->
-                            viewModel.onMergeActivity(id, listIndex)
+                            val event = allData.toMutableList()
+                            val i = event.find { it.id == id }
+                            val activityIndex = i?.list?.get(listIndex)
+                            if (lastItem == null || activityIndex == null) {
+                                Toast.makeText(
+                                    context,
+                                    "You can't merge empty activity,sorry!",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            } else {
+                                activityIndex.metricPercentage =
+                                    (lastItem!!.count.toDouble() / 10) * 100
+                                i.list.add(listIndex, lastItem!!)
+                                lastItem = null
+                            }
+                            allData = event
                         },
-                        lastItem = viewModel.lastItem.value,
+                        onEdit = { id, listIndex, activity, count ->
+                            val newEvent = allData.toMutableList()
+                            val eventIndex = newEvent.find { it.id == id }
+                            val activityIndex = eventIndex?.list?.get(listIndex)
+                            activityIndex?.count = count
+                            activityIndex?.activity = activity
+                            activityIndex?.metricPercentage = (count.toDouble() / 10) * 100
+                            allData = newEvent
+                        },
+                        onGroup = { id, listIndex ->
+                            val event = allData.toMutableList()
+                            val eventIndex = event.indexOfFirst { it.id == id }
+                            if (eventIndex != -1) {
+                                val clickedActivity = event[eventIndex].list[listIndex]
+                                val previousActivity =
+                                    if (listIndex > 0) event[eventIndex].list[listIndex - 1] else null
+                                val nextActivity =
+                                    if (listIndex < event[eventIndex].list.size - 1) event[eventIndex].list[listIndex + 1] else null
+                                if (previousActivity?.activity?.getName() == clickedActivity.activity.getName()) {
+                                    clickedActivity.count += previousActivity.count
+                                    clickedActivity.metricPercentage =
+                                        (clickedActivity.count.toDouble() / 10) * 100
+                                    event[eventIndex].list.removeAt(listIndex - 1)
+                                } else if (nextActivity?.activity?.getName() == clickedActivity.activity.getName()) {
+                                    clickedActivity.count += nextActivity.count
+                                    clickedActivity.metricPercentage =
+                                        (clickedActivity.count.toDouble() / 10) * 100
+                                    event[eventIndex].list.removeAt(listIndex + 1)
+
+                                } else {
+                                    Toast.makeText(
+                                        context,
+                                        "Sorry no matching activity found",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
+                        },
+                        onAddActivity = { id, count, activity ->
+                            val newEvent = allData.toMutableList()
+                            val eventIndex = newEvent.find { it.id == id }
+                            eventIndex?.list?.add(
+                                ActivityTypeAndCount(
+                                    count = count,
+                                    activity = activity,
+                                    metricPercentage = (count.toDouble() / 10) * 100
+                                )
+                            )
+                            allData = newEvent
+                        },
+                        lastItem = lastItem,
+                        listState = listState,
                     )
                 }
             }
         }
     }
+
+
+
+    LaunchedEffect(Unit) {
+        if (allData.isNotEmpty()) {
+            currentDate.value = allData[0].hours.toLocalDate()
+        }
+    }
+
+
+    listState.ScrolledToEnd(
+        loadMore = {
+            loadData()
+        },
+        setHeaderDate = {
+            if (allData.size > it) {
+                updateCurrentDate(allData[it].copy().hours.toLocalDate())
+
+            }
+        }
+    )
 }
 
 @SuppressLint("SuspiciousIndentation")
@@ -168,6 +309,7 @@ private fun LazyListState.ScrolledToEnd(
     setHeaderDate: (Int) -> Unit,
     bufferCount: Int = 1,
 ) {
+
     val shouldLoadMore = remember {
         derivedStateOf {
             val totalItems = layoutInfo.totalItemsCount
@@ -204,14 +346,17 @@ private fun TimelineView(
     timelineOption: TimeLineOption,
     timelinePadding: TimeLinePadding,
     isHeader: Boolean,
-    header: @Composable (TimelineEvent, onItemClicked: (Int) -> Unit) -> Unit,
-    onAddEvent: (id: String, maxCount: Int, activity: ActivityCategory, listIndex: Int) -> Unit,
+    header: @Composable (TimelineEvent, onItemClicked: (Int) -> Unit, onItemLongClick: (Int) -> Unit) -> Unit,
+    onInsertEvent: (id: String, maxCount: Int, activity: ActivityCategory, listIndex: Int) -> Unit,
+    onAddActivity: (id: String, maxCount: Int, activity: ActivityCategory) -> Unit,
     activityType: ActivityCategory,
     addSession: (TimelineEvent, index: String) -> Unit,
-    onSplit: (id: String, listIndex: Int) -> Unit,
+    onSplit: (id: String, listIndex: Int, splitCount: Int) -> Unit,
     onMerge: (id: String, listIndex: Int) -> Unit,
     onDelete: (index: String, listIndex: Int) -> Unit,
     onDeleteSession: (TimelineEvent, index: String) -> Unit,
+    onEdit: (id: String, listIndex: Int, activity: ActivityCategory, count: Int) -> Unit,
+    onGroup: (id: String, listIndex: Int) -> Unit,
 ) {
 
     val textState by remember {
@@ -231,7 +376,10 @@ private fun TimelineView(
     }
     val interactionSource = remember { MutableInteractionSource() }
 
-    val addDialogState: MutableState<Boolean> = remember {
+    val insertDialogState: MutableState<Boolean> = remember {
+        mutableStateOf(false)
+    }
+    val addActivityDialogState: MutableState<Boolean> = remember {
         mutableStateOf(false)
     }
     val addSessionDialog: MutableState<Boolean> = remember {
@@ -246,16 +394,25 @@ private fun TimelineView(
     val mergeDialog: MutableState<Boolean> = remember {
         mutableStateOf(false)
     }
-    val popupVisible = remember { mutableStateOf(false) }
+    val popupDialog: MutableState<Boolean> = remember {
+        mutableStateOf(false)
+    }
+    val popupSecondDialog: MutableState<Boolean> = remember {
+        mutableStateOf(false)
+    }
+    val editDialog: MutableState<Boolean> = remember {
+        mutableStateOf(false)
+    }
+    val groupDialog: MutableState<Boolean> = remember {
+        mutableStateOf(false)
+    }
 
     val selectedIndex = remember {
         mutableStateOf(0)
     }
 
-    val longPress: MutableState<Boolean> = remember {
-        mutableStateOf(false)
-    }
     val scope = rememberCoroutineScope()
+
 
     ConstraintLayout(
         modifier = Modifier
@@ -278,7 +435,7 @@ private fun TimelineView(
         if (textState == groupIndex) {
             Text(
                 text = hourLabel.format(DateTimeFormatter.ofPattern("EEEE")),
-                color = LightBlue,
+                color = OceanBlue,
                 modifier = Modifier.constrainAs(day) {
                     centerTo(bottomLine)
                     centerAround(parent.start)
@@ -338,15 +495,22 @@ private fun TimelineView(
                 .pointerInput(true) {
                     detectTapGestures(
                         onTap = {
-                            longPress.value = false
-                        },
-                        onLongPress = {
                             scope.launch {
-                                selectedIndex.value
                                 val press = PressInteraction.Press(it)
                                 interactionSource.emit(press)
                                 interactionSource.emit(PressInteraction.Release(press))
-                                longPress.value = true
+                                delay(1000)
+                            }
+                        },
+                        onLongPress = {
+                            popupSecondDialog.value = true
+                            scope.launch {
+                                val press = PressInteraction.Press(it)
+                                interactionSource.emit(press)
+                                interactionSource.emit(PressInteraction.Release(press))
+                                delay(1000)
+
+
                             }
                         }
                     )
@@ -354,41 +518,103 @@ private fun TimelineView(
                 .indication(interactionSource, LocalIndication.current)
         ) {
             if (isHeader) {
-                header(item) {
+                header(item, onItemClicked = {
                     selectedIndex.value = it
-                    if (!longPress.value) {
-                        showToolTip = true
-                        scope.launch {
-                            delay(2000)
-                            showToolTip = false
-                        }
+                    showToolTip = true
+                    scope.launch {
+                        delay(2000)
+                        showToolTip = false
                     }
-                        popupVisible.value = true
-
-                }
+                }, onItemLongClick = {
+                    selectedIndex.value = it
+                    popupDialog.value = true
+                })
             }
         }
+        if (insertDialogState.value) {
+            InsertActivityDialog(
+                onInsertEvent = onInsertEvent,
+                state = insertDialogState,
+                id = eventId,
+                activityEnumClass = activityType,
+                listIndex = selectedIndex.value
+            )
+        }
 
-        if (popupVisible.value) {
+        if (deleteDialog.value) {
+            DeleteActivityDialog(
+                onDelete = onDelete,
+                state = deleteDialog,
+                id = eventId,
+                listIndex = selectedIndex.value
+            )
+        }
+        if (splitDialog.value) {
+            SplitDialog(
+                state = splitDialog,
+                onSplit = onSplit,
+                id = eventId,
+                event = item,
+                index = selectedIndex.value
+            )
+        }
+
+        if (mergeDialog.value) {
+            MergeDialog(
+                state = mergeDialog,
+                onMerge = onMerge,
+                id = eventId,
+                totalCount = lastItem!!.count,
+                listIndex = selectedIndex.value
+            )
+        }
+
+        if (editDialog.value) {
+            EditActivityDialog(
+                onEdit = onEdit,
+                id = eventId,
+                state = editDialog,
+                activityEnumClass = activityType,
+                listIndex = selectedIndex.value,
+                oldCount = item.list[selectedIndex.value].count
+            )
+        }
+
+        if (groupDialog.value) {
+            GroupDialog(
+                onGroup = onGroup,
+                listIndex = selectedIndex.value,
+                id = eventId,
+                state = groupDialog,
+                event = item
+            )
+        }
+
+        if (addActivityDialogState.value) {
+            AddActivityDialog(
+                onAddActivity = onAddActivity,
+                id = eventId,
+                activityEnumClass = activityType,
+                state = addActivityDialogState
+            )
+        }
+
+        if (popupDialog.value) {
             Popup(
                 alignment = Alignment.CenterEnd,
-                onDismissRequest = { popupVisible.value = false }
-            ) {
-                if (addDialogState.value) {
-                    AddActivityDialog(
-                        onAddEvent = onAddEvent,
-                        state = addDialogState,
-                        id = eventId,
-                        activityEnumClass = activityType,
-                        listIndex = selectedIndex.value
-                    )
-                }
+                onDismissRequest = { popupDialog.value = false },
+                properties = PopupProperties(
+                    focusable = true,
+                    clippingEnabled = false
+                )
+
+                ) {
                 Card(
                     modifier = Modifier.width(130.dp),
                     elevation = CardDefaults.cardElevation(5.dp),
                     shape = RoundedCornerShape(5.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = Color.White
+                        containerColor = MaterialTheme.colorScheme.background
 
                     )
                 ) {
@@ -397,7 +623,8 @@ private fun TimelineView(
                             .fillMaxWidth()
                             .padding(4.dp)
                             .clickable {
-                                addDialogState.value = true
+                                insertDialogState.value = true
+                                popupDialog.value = false
                             },
                         verticalAlignment = Alignment.CenterVertically
                     )
@@ -411,7 +638,31 @@ private fun TimelineView(
                             )
                         }
                         Text(
-                            text = "Add Activity",
+                            text = "Insert Activity",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(4.dp)
+                            .clickable {
+                                editDialog.value = true
+                                popupDialog.value = false
+                            },
+                        verticalAlignment = Alignment.CenterVertically
+                    )
+                    {
+                        IconButton(onClick = { /*TODO*/ }) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.baseline_edit_24),
+                                contentDescription = "Edit",
+                                tint = Color.Gray
+                            )
+                        }
+                        Text(
+                            text = "Edit Activity",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -422,18 +673,11 @@ private fun TimelineView(
                             .padding(4.dp)
                             .clickable {
                                 deleteDialog.value = true
+                                popupDialog.value = false
                             },
                         verticalAlignment = Alignment.CenterVertically
                     )
                     {
-                        if (deleteDialog.value) {
-                            DeleteActivityDialog(
-                                onDelete = onDelete,
-                                state = deleteDialog,
-                                id = eventId,
-                                listIndex = selectedIndex.value
-                            )
-                        }
                         IconButton(onClick = { /*TODO*/ }) {
                             Icon(
                                 imageVector = Icons.Default.Delete,
@@ -447,20 +691,14 @@ private fun TimelineView(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                     }
-                    if (splitDialog.value) {
-                        SplitDialog(
-                            state = splitDialog,
-                            onSplit = onSplit,
-                            id = eventId,
-                            event = item,
-                            index = selectedIndex.value
-                        )
-                    }
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(4.dp)
-                            .clickable { splitDialog.value = true },
+                            .clickable {
+                                splitDialog.value = true
+                                popupDialog.value = false
+                            },
                         verticalAlignment = Alignment.CenterVertically
                     )
                     {
@@ -477,37 +715,97 @@ private fun TimelineView(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                     }
-                    if (mergeDialog.value) {
-                        MergeDialog(
-                            state = mergeDialog,
-                            onMerge = onMerge,
-                            id = eventId,
-                            totalCount = lastItem!!.count,
-                            listIndex = selectedIndex.value
+                    if(lastItem != null) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(4.dp)
+                                .clickable {
+                                    mergeDialog.value = true
+                                    popupDialog.value = false
+                                },
+                            verticalAlignment = Alignment.CenterVertically
                         )
+                        {
+                            IconButton(onClick = { /*TODO*/ }) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.baseline_merge_24),
+                                    contentDescription = "Merge",
+                                    tint = Color.Gray
+                                )
+                            }
+                            Text(
+                                text = "Merge Activity",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                     }
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(4.dp)
-                            .clickable { mergeDialog.value = true },
+                            .clickable {
+                                groupDialog.value = true
+                                popupDialog.value = false
+                            },
                         verticalAlignment = Alignment.CenterVertically
                     )
                     {
                         IconButton(onClick = { /*TODO*/ }) {
                             Icon(
-                                painter = painterResource(id = R.drawable.baseline_merge_24),
-                                contentDescription = "Merge",
+                                painter = painterResource(id = R.drawable.tab_group_fill0_wght400_grad0_opsz48),
+                                contentDescription = "group",
                                 tint = Color.Gray
                             )
                         }
                         Text(
-                            text = "Merge Activity",
+                            text = "Group Activity",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                     }
+
                 }
+            }
+        }
+        if (popupSecondDialog.value) {
+            Popup(
+                alignment = Alignment.CenterEnd,
+                onDismissRequest = { popupSecondDialog.value = false },
+                properties = PopupProperties(
+                    focusable = true,
+                    clippingEnabled = false
+                )
+            ) {
+                Card(
+                    modifier = Modifier.width(130.dp),
+                    elevation = CardDefaults.cardElevation(5.dp),
+                    shape = RoundedCornerShape(5.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.background
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(4.dp)
+                            .clickable {
+                                addActivityDialogState.value = true
+                                popupSecondDialog.value = false
+                            }, verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = { /*TODO*/ }) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "add new",
+                                tint = Color.Gray
+                            )
+                        }
+                        Text(text = "Add Activity", color = MaterialTheme.colorScheme.onSurface)
+                    }
+                }
+
             }
         }
         if (!(groupIndex == 0 && elementsIndex == HeaderIndex)) {

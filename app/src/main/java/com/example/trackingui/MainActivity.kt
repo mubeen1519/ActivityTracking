@@ -12,8 +12,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.compose.rememberNavController
+import com.example.trackingui.components.ZoomableLayout
 import com.example.trackingui.navgraph.NavGraph
 import com.example.trackingui.screens.ActivityViewModel
 import com.example.trackingui.ui.theme.AppTheme
@@ -30,6 +32,7 @@ class MainActivity : ComponentActivity() {
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setContent {
 
             val theme = themeSetting.themeFlow.collectAsState()
@@ -39,12 +42,13 @@ class MainActivity : ComponentActivity() {
                 AppTheme.AUTO -> isSystemInDarkTheme()
             }
             TrackingUITheme(darkTheme = useDarkColors) {
-                // A surface container using the 'background' color from the theme
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    MainScreen()
+                ZoomableLayout {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background
+                    ) {
+                        MainScreen()
+                    }
                 }
             }
         }
@@ -53,7 +57,7 @@ class MainActivity : ComponentActivity() {
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun MainScreen(){
+fun MainScreen() {
     val navController = rememberNavController()
     NavGraph(navHostController = navController)
 }

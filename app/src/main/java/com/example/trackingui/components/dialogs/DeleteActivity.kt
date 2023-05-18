@@ -15,7 +15,6 @@ import androidx.compose.ui.unit.dp
 import com.example.trackingui.model.ModeldataId
 
 @RequiresApi(Build.VERSION_CODES.O)
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DeleteActivityDialog(
     onDelete: (id: String, listIndex : Int) -> Unit,
@@ -49,7 +48,6 @@ fun DeleteActivityDialog(
                     },
                     shape = RoundedCornerShape(5.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.Cyan,
                         contentColor = Color.Red
                     )
                 ) {
@@ -60,7 +58,7 @@ fun DeleteActivityDialog(
                     onClick = { state.value = false },
                     shape = RoundedCornerShape(5.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.White,
+                        containerColor = MaterialTheme.colorScheme.background,
                         contentColor = MaterialTheme.colorScheme.onSurface
                     )
                 ) {

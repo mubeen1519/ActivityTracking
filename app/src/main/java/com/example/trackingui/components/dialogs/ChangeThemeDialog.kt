@@ -51,7 +51,7 @@ private fun ThemeContent(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.secondary)
+            .background(MaterialTheme.colorScheme.background)
             .padding(10.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {

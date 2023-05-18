@@ -19,7 +19,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.example.trackingui.model.TimelineEvent
-import com.example.trackingui.ui.theme.LightOrange
+import com.example.trackingui.ui.theme.MidOrange
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -50,7 +50,7 @@ fun Bubble(
         modifier = modifier
             .clip(bubbleShape)
             .shadow(2.dp)
-            .background(LightOrange)
+            .background(MaterialTheme.colorScheme.onSecondary)
             .padding(bottom = arrowHeight)
             .width(width = 140.dp),
     ) {
@@ -62,7 +62,7 @@ fun Bubble(
                     style = MaterialTheme.typography.labelSmall
                 )
                 Text(
-                    text = "${events.metricPercentage.toInt()}%, ${events.list[index].count}",
+                    text = "${events.list[index].metricPercentage.toInt()}%, ${events.list[index].count}",
                     color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.labelSmall
                 )

@@ -17,6 +17,7 @@ import com.example.trackingui.model.ActivityCategory
 import com.example.trackingui.model.ActivityTypeAndCount
 import com.example.trackingui.model.ModeldataId
 import com.example.trackingui.model.TimelineEvent
+import com.example.trackingui.ui.theme.LightBlue
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -26,18 +27,22 @@ import java.util.*
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun AddSession(
-    onAddSession: (TimelineEvent, index : String) -> Unit,
+    onAddSession: (TimelineEvent, index: String) -> Unit,
     state: MutableState<Boolean>,
     currentDate: LocalDate,
-    data : MutableState<ModeldataId>,
-    onDeleteSession : (TimelineEvent,index : String) -> Unit,
+    data: MutableState<ModeldataId>,
+    onDeleteSession: (TimelineEvent, index: String) -> Unit,
     activityCategory: ActivityCategory
 ) {
-        val activityCountList : MutableList<ActivityTypeAndCount> = remember {
-        mutableStateListOf(ActivityTypeAndCount(
-            activity = activityCategory,
-            count = 8
-        ))
+    val metricPercentage = 8
+    val activityCountList: MutableList<ActivityTypeAndCount> = remember {
+        mutableStateListOf(
+            ActivityTypeAndCount(
+                activity = activityCategory,
+                count = 8,
+                metricPercentage = (metricPercentage.toDouble() / 10) * 100
+            )
+        )
     }
 
     val context = LocalContext.current
@@ -51,7 +56,6 @@ fun AddSession(
         mutableStateOf(
             TimelineEvent(
                 hours = LocalDateTime.of(currentDate, LocalTime.now()),
-                metricPercentage = 70.0,
                 list = activityCountList
             )
         )
@@ -64,7 +68,7 @@ fun AddSession(
                 LocalTime.of(hour.toClockPattern().toInt(), minute.toClockPattern().toInt())
             )
         )
-        onAddSession(event,data.value.index)
+        onAddSession(event, data.value.index)
     }
 
     val timePickerDialog = TimePickerDialog(
@@ -80,24 +84,37 @@ fun AddSession(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(10.dp)
-                .background(Color.White),
+                .background(MaterialTheme.colorScheme.background),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(modifier = Modifier.height(15.dp))
-            Text(text = "Select Time To Add New Session")
+            Text(
+                text = "Select Time To Add New Session",
+                color = MaterialTheme.colorScheme.onSurface
+            )
             Spacer(modifier = Modifier.height(15.dp))
-            Button(onClick = { timePickerDialog.show() }, shape = RoundedCornerShape(5.dp)) {
+            Button(onClick = {
+                timePickerDialog.show()
+                state.value = false
+            }, shape = RoundedCornerShape(5.dp), colors = ButtonDefaults.buttonColors(
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                containerColor = LightBlue
+            )) {
                 Text(text = "Select Time")
             }
             Spacer(modifier = Modifier.height(15.dp))
-            Text(text = "Wanna Delete this Session?")
+            Text(text = "Wanna Delete this Session?", color = MaterialTheme.colorScheme.onSurface)
             Spacer(modifier = Modifier.height(15.dp))
-            Button(onClick = {onDeleteSession(event,data.value.index)},  shape = RoundedCornerShape(5.dp),
+            Button(
+                onClick = {
+                    onDeleteSession(event, data.value.index)
+                    state.value = false
+                }, shape = RoundedCornerShape(5.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.Cyan,
                     contentColor = Color.Red
-                )) {
+                )
+            ) {
                 Text(text = "Delete")
             }
         }

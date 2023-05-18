@@ -18,18 +18,19 @@ import com.example.trackingui.ui.theme.LightBlue
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddActivityDialog(
-    onAddActivity: (id: String, maxCount: Int, activity: ActivityCategory) -> Unit,
+fun EditActivityDialog(
+    onEdit: (id: String, listIndex: Int, activity: ActivityCategory, count: Int) -> Unit,
     id: MutableState<ModeldataId>,
+    state: MutableState<Boolean>,
     activityEnumClass: ActivityCategory,
-    state : MutableState<Boolean>
+    listIndex: Int,
+    oldCount : Int,
 ) {
-    val activity : MutableState<ActivityCategory> =  remember { mutableStateOf(activityEnumClass) }
-    var maxCount by remember {
-        mutableStateOf(0)
+
+    val activity: MutableState<ActivityCategory> = remember { mutableStateOf(activityEnumClass) }
+    var countState by remember {
+        mutableStateOf(oldCount)
     }
-
-
     var expanded by remember { mutableStateOf(false) }
 
     CommonDialog(state) {
@@ -42,9 +43,10 @@ fun AddActivityDialog(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Add New Event",
+                text = "Edit this activity",
                 color = MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall,
+                modifier = Modifier.padding(top = 4.dp)
             )
             Spacer(modifier = Modifier.height(10.dp))
             Divider(
@@ -114,8 +116,8 @@ fun AddActivityDialog(
             }
 
             OutlinedTextField(
-                value = maxCount.toString(), onValueChange = {
-                    maxCount = it.toIntOrNull() ?: 0
+                value = countState.toString(), onValueChange = {
+                    countState = it.toIntOrNull() ?: 0
                 },
                 label = {
                     Text(text = "Number of Cycles")
@@ -135,22 +137,20 @@ fun AddActivityDialog(
             Spacer(modifier = Modifier.height(8.dp))
 
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(10.dp),
+                modifier = Modifier.fillMaxWidth().padding(10.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Button(
                     onClick = {
-                        onAddActivity(id.value.index, maxCount, activity.value)
+                        onEdit(id.value.index, listIndex, activity.value, countState)
                         state.value = false
                     }, colors = ButtonDefaults.buttonColors(
                         containerColor = LightBlue,
                         contentColor = MaterialTheme.colorScheme.onSurface
                     ), shape = RoundedCornerShape(5.dp)
                 ) {
-                    Text(text = "Add")
+                    Text(text = "Edit")
                 }
 
                 Text(
@@ -162,3 +162,4 @@ fun AddActivityDialog(
         }
     }
 }
+

@@ -27,7 +27,7 @@ fun RadioGroup(
 ) {
     Column(modifier = modifier
         .selectableGroup()
-        .background(MaterialTheme.colorScheme.secondary)) {
+        .background(MaterialTheme.colorScheme.background)) {
         items.forEach { item ->
             RadioGroupItems(
                 items = item,

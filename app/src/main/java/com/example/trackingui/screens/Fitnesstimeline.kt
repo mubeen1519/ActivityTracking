@@ -3,7 +3,9 @@ package com.example.trackingui.screens
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.*
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
@@ -14,7 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.Fill
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -27,6 +29,7 @@ import com.example.trackingui.model.ActivityCategory
 import com.example.trackingui.model.ActivityTypeAndCount
 import com.example.trackingui.model.FitnessActivityType
 import com.example.trackingui.model.TimelineEvent
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -40,14 +43,11 @@ fun FitnessTimeline(navController: NavController, viewModel: ActivityViewModel =
     val changeThemeDialog: MutableState<Boolean> = remember {
         mutableStateOf(false)
     }
-    val context = LocalContext.current
     val selectedIndex = remember {
         mutableStateOf(0)
     }
     var tapped by remember { mutableStateOf(false) }
-    var showToolTip by remember {
-        mutableStateOf(false)
-    }
+
     val scope = rememberCoroutineScope()
     val interactionSource = remember { MutableInteractionSource() }
     val hour = kotlin.random.Random.nextInt(0, 24)
@@ -64,126 +64,148 @@ fun FitnessTimeline(navController: NavController, viewModel: ActivityViewModel =
             )
         )
     }
-
-    BoxWithConstraints(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(20.dp)
-    ) {
-        if (changeThemeDialog.value) {
-            ChangeThemeDialog(state = changeThemeDialog, userSetting = viewModel.themeSetting)
-        }
-        Text(
-            text = stringResource(id = R.string.fitness_screen),
-            color = MaterialTheme.colorScheme.onSurface,
-            style = MaterialTheme.typography.titleLarge,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.align(Alignment.TopCenter).padding(top = 10.dp)
-        )
-        IconButton(
-            onClick = { mDisplayMenu = !mDisplayMenu },
-            modifier = Modifier.align(Alignment.TopEnd),
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(20.dp)
         ) {
-            Icon(imageVector = Icons.Default.MoreVert, contentDescription = "menu")
-            DropdownMenu(expanded = mDisplayMenu, onDismissRequest = { mDisplayMenu = false }
-            ) {
-                DropdownMenuItem(text = { Text(text = "Change Theme") },
-                    onClick = { changeThemeDialog.value = true }
-                )
-                DropdownMenuItem(text = { Text(text = "Go To Meditation") },
-                    onClick = {
-                        navController.navigate(CategoryScreens.MeditationScreen.route) {
-                            launchSingleTop = true
-                        }
-                    }
-                )
+            if (changeThemeDialog.value) {
+                ChangeThemeDialog(state = changeThemeDialog, userSetting = viewModel.themeSetting)
             }
-
-
-        }
-        TimeLine(
-//            items = listOf(
-//                TimelineEvent(
-//                    list = list,
-//                    hours = hours
-//                ),
-//                TimelineEvent(
-//                    list = list,
-//                    hours = hours
-//                ),
-//                TimelineEvent(
-//                    list = list,
-//                    hours = hours
-//                ),
-//                TimelineEvent(
-//                    list = list,
-//                    hours = hours
-//                ),
-//                TimelineEvent(
-//                    list = list,
-//                    hours = hours
-//                ),
-//                TimelineEvent(
-//                    list = list,
-//                    hours = hours
-//                ),
-//                TimelineEvent(
-//                    list = list,
-//                    hours = hours
-//                )
-//            ),
-            header = { events,onItemClick ->
-
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.background)
+            Text(
+                text = stringResource(id = R.string.fitness_screen),
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.titleLarge,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 10.dp)
+            )
+            IconButton(
+                onClick = { mDisplayMenu = !mDisplayMenu },
+                modifier = Modifier.align(Alignment.TopEnd),
+            ) {
+                Icon(imageVector = Icons.Default.MoreVert, contentDescription = "menu")
+                DropdownMenu(expanded = mDisplayMenu, onDismissRequest = { mDisplayMenu = false }
                 ) {
-                    events.list.forEachIndexed { index, value ->
-                        Column(
-                            Modifier
-                                .padding(vertical = 4.dp)
-                                .clickable {
-                                    selectedIndex.value = index
-                                    onItemClick(index)
-                                    if (selectedIndex.value == index) {
-                                        tapped = true
-                                        scope.launch {
-                                            tapped = false
-                                        }
-                                    }
-                                },
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Canvas(
-                                Modifier.size(
-                                    width = (10.dp + 2.dp) * value.count - 7.dp,
-                                    height = 30.dp
-                                )
-                            ) {
+                    DropdownMenuItem(text = { Text(text = "Change Theme") },
+                        onClick = { changeThemeDialog.value = true }
+                    )
+                    DropdownMenuItem(text = { Text(text = "Go To Meditation") },
+                        onClick = {
+                            navController.navigate(CategoryScreens.MeditationScreen.route) {
+                                launchSingleTop = true
+                            }
+                        }
+                    )
+                }
 
-                                val rectangleWidth =
-                                    (size.width - ((value.count - 1) * 5.dp.toPx())) / value.count.toFloat()
-                                repeat(value.count) { i ->
-                                    val rectangleLeft = rectangleWidth * i + (2.dp.toPx() * i)
-                                    drawRect(
-                                        color = value.activity.color,
-                                        topLeft = Offset(rectangleLeft, 0f),
-                                        size = Size(rectangleWidth, size.height),
-                                        style = Fill
+
+            }
+            TimeLine(
+                item = listOf(
+                    TimelineEvent(
+                        list = list,
+                        hours = hours
+                    ),
+                    TimelineEvent(
+                        list = list,
+                        hours = hours
+                    ),
+                    TimelineEvent(
+                        list = list,
+                        hours = hours
+                    ),
+                    TimelineEvent(
+                        list = list,
+                        hours = hours
+                    ),
+                    TimelineEvent(
+                        list = list,
+                        hours = hours
+                    ),
+                    TimelineEvent(
+                        list = list,
+                        hours = hours
+                    ),
+                    TimelineEvent(
+                        list = list,
+                        hours = hours
+                    ),
+                ),
+                header = { events, onItemClick, onLongPress ->
+
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.background)
+                    ) {
+                        events.list.forEachIndexed { index, value ->
+                            Column(
+                                Modifier
+                                    .padding(vertical = 4.dp)
+                                    .pointerInput(Unit) {
+                                        detectTapGestures(
+                                            onTap = {
+                                                tapped = true
+                                                selectedIndex.value = index
+                                                onItemClick(index)
+                                                if (selectedIndex.value == index) {
+                                                    scope.launch {
+                                                        val press = PressInteraction.Press(it)
+                                                        interactionSource.emit(press)
+                                                        interactionSource.emit(
+                                                            PressInteraction.Release(
+                                                                press
+                                                            )
+                                                        )
+                                                        delay(1000)
+                                                        tapped = false
+                                                    }
+                                                }
+                                            },
+                                            onLongPress = {
+                                                tapped = true
+                                                selectedIndex.value = index
+                                                onLongPress(index)
+
+                                            }
+                                        )
+                                    },
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Canvas(
+                                    Modifier.size(
+                                        width = (10.dp + 2.dp) * value.count - 7.dp,
+                                        height = 30.dp
                                     )
+                                ) {
+
+                                    val rectangleWidth =
+                                        (size.width - ((value.count - 1) * 5.dp.toPx())) / value.count.toFloat()
+                                    repeat(value.count) { i ->
+                                        val rectangleLeft = rectangleWidth * i + (2.dp.toPx() * i)
+                                        drawRect(
+                                            color = value.activity.color,
+                                            topLeft = Offset(rectangleLeft, 0f),
+                                            size = Size(rectangleWidth, size.height),
+                                            style = Fill
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
-                }
-            },
-            activityCategory = ActivityCategory.FitnessActivity(FitnessActivityType.values().random()),
+                },
+                activityCategory = ActivityCategory.FitnessActivity(
+                    FitnessActivityType.values().random()
+                ),
 
-            )
+                )
 
+        }
     }
-}
+
 
 
 
